@@ -1,3 +1,17 @@
+# htop-tycoon — htop-styled TUI business simulator
+
+> **Looks like server monitoring at a glance. Actually a deep business simulator.**
+> CPU = revenue, memory = inventory, swap = debt, zombie = employees at quitting risk.
+
+*(Korean: 화면 캡처 한 장만 봐도 서버 모니터링 같지만, 사실 회사 경영 게임.
+CPU는 매출, 메모리는 재고, 좀비 프로세스는 퇴사 위기 직원.)*
+
+See the Korean sections below for the full feature guide, key bindings, and roadmap.
+T34 will replace this skeleton with a complete bilingual README; T1 only requires a
+bilingual title + one-line description.
+
+---
+
 # 💼 htop-tycoon — htop으로 회사 경영하는 TUI 게임
 
 > **화면 캡처 한 장만 봐도 서버 모니터링 같지만, 사실 회사 경영 게임.**

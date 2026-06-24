@@ -47,3 +47,10 @@ htmlcov/
 # Project
 *.log
 .cache/
+
+# Planning artifacts (never commit; durable per session, not per repo)
+.omo/
+.omo/evidence/
+
+# Textual dev console
+.textual_dump/
