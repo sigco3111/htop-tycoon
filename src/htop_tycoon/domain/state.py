@@ -23,6 +23,7 @@ __all__ = [
     "GameState",
     "GameTime",
     "ProductId",
+    "StoryNodeId",
     "new_game",
     "state_hash",
 ]
@@ -35,6 +36,7 @@ EmployeeId = NewType("EmployeeId", str)
 ProductId = NewType("ProductId", str)
 CompetitorId = NewType("CompetitorId", str)
 EventId = NewType("EventId", str)
+StoryNodeId = NewType("StoryNodeId", str)
 
 
 def _require_strict_int(name: str, value: object) -> int:
