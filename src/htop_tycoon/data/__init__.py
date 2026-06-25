@@ -22,7 +22,37 @@ REQUIRED_TOP_LEVEL_KEYS: frozenset[str] = frozenset(
     }
 )
 
-__all__ = ["REQUIRED_TOP_LEVEL_KEYS", "load_balance", "load_endings"]
+__all__ = ["REQUIRED_TOP_LEVEL_KEYS", "load_balance", "load_endings", "load_seeds"]
+
+_SEEDS_YAML_FILENAME: str = "seeds.yaml"
+
+
+@lru_cache(maxsize=1)
+def load_seeds() -> dict[str, Any]:
+    """Load and parse ``seeds.yaml`` from this package.
+
+    Cached after the first call so all callers receive the same ``dict``
+    object (identity-equal). Mirrors :func:`load_balance` and
+    :func:`load_endings`.
+
+    Returns:
+        The parsed YAML mapping, typed as ``dict[str, Any]``. The T33
+        contract requires the top-level key ``endings`` (a mapping of
+        ending key -> ``{seed, expected_tick, command_line}`` fixture).
+
+    Raises:
+        FileNotFoundError: If ``seeds.yaml`` is missing from the package.
+        TypeError: If the YAML root is not a mapping.
+    """
+    yaml_path = Path(__file__).parent / _SEEDS_YAML_FILENAME
+    with yaml_path.open(encoding="utf-8") as handle:
+        data = yaml.safe_load(handle)
+    if not isinstance(data, dict):
+        raise TypeError(
+            f"{_SEEDS_YAML_FILENAME} must be a mapping at the root, "
+            f"got {type(data).__name__}"
+        )
+    return data
 
 
 @lru_cache(maxsize=1)
