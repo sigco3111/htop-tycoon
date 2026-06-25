@@ -30,6 +30,7 @@ from textual.app import App
 from textual.containers import Horizontal
 from textual.widgets import Static
 
+from htop_tycoon.bindings.registry import register_f_bindings
 from htop_tycoon.domain.state import GameState, new_game
 from htop_tycoon.engine.events import EventBus
 from htop_tycoon.engine.tick import TickEngine
@@ -67,8 +68,8 @@ class HtopTycoonApp(App[None]):
     # Locked CSS path (relative to this module). Textual loads it at startup.
     CSS_PATH: ClassVar[str] = _CSS_FILE
 
-    # Key bindings — filled in T24-T25. Empty today means "no keybinds yet".
-    BINDINGS: ClassVar[list[Any]] = []
+    # F1..F10 bindings — stubs (T25 implements the actions for real).
+    BINDINGS: ClassVar[list[Any]] = register_f_bindings()
 
     def __init__(
         self,
@@ -108,6 +109,9 @@ class HtopTycoonApp(App[None]):
         # attribute so tests can assert the timer exists + has the right
         # interval.
         self._tick_timer: Timer | None = None
+
+        # Last F-key action stub that fired; T24 Pilot tests assert on this.
+        self._last_action: str | None = None
 
     # ------------------------------------------------------------------ layout
 
@@ -190,6 +194,59 @@ class HtopTycoonApp(App[None]):
         # swap this for ``self.engine.advance(self.state, 1)[1]`` and
         # unpack both values.
         self.event_bus.publish_many([])
+
+    # ------------------------------------------------------------------ F-key action stubs
+
+    def _fire_stub(self, action_name: str, label_ko: str) -> None:
+        """Shared helper: record the stub fire and surface a notify.
+
+        Each ``action_*`` stub calls this so the user sees feedback and the
+        T24 Pilot tests can assert the right action was reached.
+        ``action_name`` is the locked action id (``show_help``,
+        ``fire_selected``, ...); ``label_ko`` is the user-visible label.
+        """
+        self._last_action = action_name
+        self.notify(f"{label_ko} ({action_name})")
+
+    def action_show_help(self) -> None:
+        """F1 stub — opens the help modal (real impl in T25)."""
+        self._fire_stub("show_help", "도움말")
+
+    def action_show_setup(self) -> None:
+        """F2 stub — opens setup/save modal (real impl in T25)."""
+        self._fire_stub("show_setup", "설정/저장")
+
+    def action_search(self) -> None:
+        """F3 stub — opens search (real impl in T25)."""
+        self._fire_stub("search", "검색")
+
+    def action_filter(self) -> None:
+        """F4 stub — opens filter (real impl in T25)."""
+        self._fire_stub("filter", "필터")
+
+    def action_toggle_tree(self) -> None:
+        """F5 stub — toggles org-tree view (real impl in T25)."""
+        self._fire_stub("toggle_tree", "트리")
+
+    def action_cycle_sort(self) -> None:
+        """F6 stub — cycles sort order (real impl in T25)."""
+        self._fire_stub("cycle_sort", "정렬")
+
+    def action_promote_selected(self) -> None:
+        """F7 stub — promotes the selected employee (real impl in T25)."""
+        self._fire_stub("promote_selected", "승진")
+
+    def action_demote_selected(self) -> None:
+        """F8 stub — demotes the selected employee (real impl in T25)."""
+        self._fire_stub("demote_selected", "감봉")
+
+    def action_fire_selected(self) -> None:
+        """F9 stub — fires the selected employee (real impl in T25)."""
+        self._fire_stub("fire_selected", "해고")
+
+    def action_quit_or_sell(self) -> None:
+        """F10 stub — quits the game or sells the company (real impl in T25)."""
+        self._fire_stub("quit_or_sell", "종료/매각")
 
 
 # ------------------------------------------------------------------
