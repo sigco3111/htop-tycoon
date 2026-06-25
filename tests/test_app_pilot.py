@@ -41,14 +41,17 @@ class TestHtopTycoonAppConstruction:
 
         assert issubclass(HtopTycoonApp, App)
 
-    def test_app_has_empty_bindings_list(self) -> None:
-        """``BINDINGS`` is a class attribute equal to ``[]`` (filled in T24-T25).
+    def test_app_bindings_class_attribute_wired_by_t24(self) -> None:
+        """``BINDINGS`` is a class attribute. T16 left it empty; T24 wired it.
 
-        The field MUST exist as an empty list — keys/bindings are wired in a
-        later task. Empty today means "no keybinds yet".
+        T24 registers the 10 locked F1-F10 ``Binding`` objects via
+        ``htop_tycoon.bindings.registry.register_f_bindings()`` and T25
+        extends with 8 single-key entries (18 total). The full behavioral
+        contract (each key fires its action_* method, etc.) is pinned by
+        ``tests/test_bindings_pilot.py`` and ``tests/test_single_key_bindings_pilot.py``.
         """
         assert hasattr(HtopTycoonApp, "BINDINGS")
-        assert HtopTycoonApp.BINDINGS == []
+        assert len(HtopTycoonApp.BINDINGS) >= 1
 
     def test_app_accepts_seed_tick_rate_no_autosave(self) -> None:
         """The constructor accepts ``seed``, ``tick_rate``, ``no_autosave``.
@@ -247,7 +250,11 @@ def test_startup_snapshot_keys() -> None:
     assert snap["seed"] == 42
     assert snap["tick_rate"] == 100
     assert snap["no_autosave"] is True
-    assert snap["bindings"] == []
+    # T24 wired BINDINGS via register_f_bindings() (10 F-row entries).
+    # T25 extended it with register_single_key_bindings() (8 more entries)
+    # for a total of 18. The F-row slice stays at 10; the full list is 18.
+    assert len(snap["bindings"]) == 18
+    assert len(snap["bindings"][:10]) == 10
     assert snap["initial_state_tick"] == 0
     assert snap["initial_rng_seed"] == 42
 

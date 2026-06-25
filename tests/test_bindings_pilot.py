@@ -131,16 +131,34 @@ class TestRegistryBindingsExact:
 
 
 class TestAppBindingsAttribute:
-    """``HtopTycoonApp.BINDINGS`` contains the 10 locked F1-F10 bindings."""
+    """``HtopTycoonApp.BINDINGS`` contains the 10 locked F1-F10 bindings.
 
-    def test_app_bindings_has_ten_entries(self) -> None:
-        """After T24, ``BINDINGS`` has exactly 10 entries (was [] in T16)."""
-        assert len(HtopTycoonApp.BINDINGS) == 10
+    After T25 the App's BINDINGS also include the 8 single-key bindings
+    (t, u, m, p, T, up, down, space). The F-row slice still matches the
+    locked T24 tuple; the full list has 18 entries. The tests below
+    assert the F-row slice specifically (first 10 entries) so the T24
+    contract stays locked.
+    """
+
+    def test_app_bindings_has_ten_f_row_entries(self) -> None:
+        """After T24, the F-row slice of ``BINDINGS`` has exactly 10 entries.
+
+        T25 extended ``BINDINGS`` with 8 single-key entries for a total of
+        18; this test pins the F-row slice (``BINDINGS[:10]``) which is
+        the T24 contract.
+        """
+        assert len(HtopTycoonApp.BINDINGS[:10]) == 10
 
     def test_app_bindings_match_locked_table(self) -> None:
-        """The App's BINDINGS match the locked (key, action, description)."""
+        """The App's F-row BINDINGS match the locked (key, action, description).
+
+        T25 extended ``BINDINGS`` with 8 single-key entries; the F-row
+        contract is locked in the first 10 entries (T24). The full
+        single-key extension is pinned by
+        ``tests/test_single_key_bindings_pilot.py``.
+        """
         for binding, expected in zip(
-            HtopTycoonApp.BINDINGS, LOCKED_BINDINGS, strict=True
+            HtopTycoonApp.BINDINGS[:10], LOCKED_BINDINGS, strict=True
         ):
             exp_key, exp_action, exp_desc = expected
             assert binding.key == exp_key
@@ -148,13 +166,15 @@ class TestAppBindingsAttribute:
             assert binding.description == exp_desc
 
     def test_app_bindings_match_registry(self) -> None:
-        """App BINDINGS are byte-identical to ``register_f_bindings()`` output."""
+        """App's F-row BINDINGS are byte-identical to ``register_f_bindings()`` output.
+
+        T25 extended ``BINDINGS`` with the single-key registry; this
+        test pins the T24 contract on the F-row slice (``BINDINGS[:10]``).
+        """
         registry = register_f_bindings()
-        # Compare field-by-field because Binding is a dataclass — list eq
-        # works but field-by-field makes failures easier to read.
-        assert len(HtopTycoonApp.BINDINGS) == len(registry)
+        assert len(HtopTycoonApp.BINDINGS[:10]) == len(registry)
         for app_binding, reg_binding in zip(
-            HtopTycoonApp.BINDINGS, registry, strict=True
+            HtopTycoonApp.BINDINGS[:10], registry, strict=True
         ):
             assert app_binding == reg_binding
 
@@ -247,11 +267,17 @@ class TestOutOfListKeys:
             assert app._last_action is None  # type: ignore[attr-defined]
 
     async def test_all_ten_f_keys_fire_their_action(self) -> None:
-        """Exhaustive: every one of F1..F10 triggers its own action_* stub."""
+        """Exhaustive: every one of F1..F10 triggers its own action_* stub.
+
+        T25 extended ``BINDINGS`` with the single-key entries; this test
+        iterates only the F-row slice so the T24 contract stays locked.
+        The full 18-entry behavior (including single-key actions) is
+        pinned by ``tests/test_single_key_bindings_pilot.py``.
+        """
         app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
         async with app.run_test() as pilot:
             await pilot.pause()
-            for binding in HtopTycoonApp.BINDINGS:
+            for binding in HtopTycoonApp.BINDINGS[:10]:
                 app._last_action = None  # type: ignore[attr-defined]
                 await pilot.press(binding.key)
                 await pilot.pause()

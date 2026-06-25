@@ -1,25 +1,29 @@
 """htop_tycoon.ui.app — HtopTycoonApp: Textual App skeleton + locked 5-region layout.
 
-Locks the contract from ``.omo/plans/htop-tycoon.md`` line 434-456 (T16):
+Locks the contracts from ``.omo/plans/htop-tycoon.md``:
 
-- ``HtopTycoonApp`` subclasses ``textual.app.App`` and accepts
-  ``seed: int = 42``, ``tick_rate: float = 1.0``, ``no_autosave: bool = False``.
-- ``BINDINGS = []`` is a class attribute (filled in T24-T25).
-- CSS lives in ``app.tcss`` (sibling of this module) and defines the locked
-  5-region layout: header / metrics / body (org-tree + employee-panel) /
-  alerts / footer.
-- ``on_mount`` starts the periodic tick via ``self.set_interval`` using the
-  locked wrapper ``self._tick_once`` — see the wiring note in
-  ``_tick_once``'s docstring (do NOT call ``engine.advance`` directly).
-- ``_tick_once`` is the CRITICAL wiring: a no-arg wrapper that supplies the
-  current ``self.state`` to ``engine.advance``. Textual's ``set_interval``
-  passes no arguments, but ``engine.advance(state, n_ticks)`` requires the
-  state, so the wrapper is the only correct pattern.
+- T16 (line 434-456): ``HtopTycoonApp`` subclasses ``textual.app.App`` and
+  accepts ``seed: int = 42``, ``tick_rate: float = 1.0``, ``no_autosave: bool =
+  False``. CSS lives in ``app.tcss`` (sibling of this module) and defines
+  the 5 regions plus the header/footer: ``#header``, ``#metrics``, ``#body``
+  (containing ``#org-tree`` and ``#employee-panel``), ``#alerts``, ``#footer``.
+  ``on_mount`` starts the periodic tick via ``self.set_interval`` using the
+  locked wrapper ``self._tick_once``.
+- T24 (line 537-561): ``BINDINGS`` extends the F-row with 10 ``Binding``
+  objects (F1..F10) registered via ``bindings.registry.register_f_bindings()``.
+- T25 (line 565-585): ``BINDINGS`` further extends with 8 single-key
+  ``Binding`` objects (t, u, m, p, T, up, down, space) registered via
+  ``bindings.registry.register_single_key_bindings()``. Total length: 18.
+
+The action handler LOGIC lives in ``ui/action_handlers.py`` (split for the
+250 LOC ceiling). This module owns the App lifecycle + layout + state
+attributes; each ``action_<name>`` method here is a thin delegation to the
+matching handler in ``action_handlers.py``.
 
 This module is the UI entry point. UI handlers MUST NOT mutate ``self.state``
 directly — the engine is the only writer (per AGENTS.md "State boundary"
-invariant). The wrapper here delegates to ``engine.advance`` and rebinds
-``self.state`` to the returned new state, then publishes events via the bus.
+invariant). Each action that returns a new state rebinds ``self.state`` and
+publishes the events through ``self.event_bus``.
 """
 
 from __future__ import annotations
@@ -30,10 +34,14 @@ from textual.app import App
 from textual.containers import Horizontal
 from textual.widgets import Static
 
-from htop_tycoon.bindings.registry import register_f_bindings
-from htop_tycoon.domain.state import GameState, new_game
+from htop_tycoon.bindings.registry import (
+    register_f_bindings,
+    register_single_key_bindings,
+)
+from htop_tycoon.domain.state import EmployeeId, GameState, new_game
 from htop_tycoon.engine.events import EventBus
 from htop_tycoon.engine.tick import TickEngine
+from htop_tycoon.ui import action_handlers
 
 if TYPE_CHECKING:
     from textual.timer import Timer
@@ -61,15 +69,23 @@ class HtopTycoonApp(App[None]):
 
     Class attributes:
 
-    - ``BINDINGS``: list of ``Binding`` — empty until T24-T25.
+    - ``BINDINGS``: list of ``Binding`` — 10 F-row entries (T24) + 8 single-
+      key entries (T25) = 18 total, in order. Each entry's ``action``
+      resolves to an ``action_<name>`` method on this App, which delegates
+      to ``action_handlers.<name>``.
     - ``CSS_PATH``: relative path to ``app.tcss`` (the locked CSS).
     """
 
     # Locked CSS path (relative to this module). Textual loads it at startup.
     CSS_PATH: ClassVar[str] = _CSS_FILE
 
-    # F1..F10 bindings — stubs (T25 implements the actions for real).
-    BINDINGS: ClassVar[list[Any]] = register_f_bindings()
+    # F1..F10 + single-key bindings — registered at class-body evaluation.
+    # Both ``register_*`` functions return fresh lists; concatenation is
+    # safe and produces an independent list per class load.
+    BINDINGS: ClassVar[list[Any]] = [
+        *register_f_bindings(),
+        *register_single_key_bindings(),
+    ]
 
     def __init__(
         self,
@@ -85,33 +101,28 @@ class HtopTycoonApp(App[None]):
               ``self.engine`` is a ``TickEngine(seed)``,
               ``self.event_bus`` is an ``EventBus``,
               and the three config flags are stored on the instance.
-
-        ``self.state``, ``self.engine``, ``self.event_bus`` are initialized
-        eagerly (in ``__init__``, not in ``on_mount``) so plain-Python
-        smoke tests that construct the App without Pilot can still inspect
-        them. The interval timer itself starts in ``on_mount`` because
-        Textual's timer machinery requires a running event loop.
         """
         super().__init__()
-        # Stash config on the instance so tests + T30's CLI can read them.
         self.seed: int = seed
         self.tick_rate: float = tick_rate
         self.no_autosave: bool = no_autosave
 
-        # State + engine + bus. The engine is seeded with the SAME seed as
-        # new_game so the determinism invariant (per AGENTS.md) holds.
         self.state: GameState = new_game(seed)
         self.engine: TickEngine = TickEngine(seed)
         self.event_bus: EventBus = EventBus()
 
-        # ``_tick_timer`` is populated in ``on_mount`` (Textual's
-        # ``set_interval`` returns a Timer instance). Exposed as an
-        # attribute so tests can assert the timer exists + has the right
-        # interval.
         self._tick_timer: Timer | None = None
-
-        # Last F-key action stub that fired; T24 Pilot tests assert on this.
         self._last_action: str | None = None
+        self._selected_employee_id: EmployeeId | None = None
+
+        # Sort cycle index for F6 (cycle_sort). Incremented modulo the
+        # length of the cycle tuple in action_handlers.
+        self._sort_cycle_index: int = 0
+
+        # Set of employee ids tagged by Space (T25: marker only, no bulk
+        # action). Per the plan MUST-NOT-DO, Space is purely visual for
+        # v0.1.0; bulk fire via tagged employees is deferred.
+        self._tagged_employee_ids: set[EmployeeId] = set()
 
     # ------------------------------------------------------------------ layout
 
@@ -123,33 +134,18 @@ class HtopTycoonApp(App[None]):
         HeaderCounter, FooterHints). The IDs MUST match the locked CSS in
         ``app.tcss``.
         """
-        # Header (h=1) — T21 HeaderCounter replaces this with a tick counter.
         yield Static(id="header")
-        # Metrics row (h=5) — T17 MetricBar x 3 (CPU/MEM/SWAP) replaces this.
         yield Static(id="metrics")
-        # Body: horizontal split with org-tree (30%) + employee-panel (1fr).
         with Horizontal(id="body"):
             yield Static(id="org-tree")
             yield Static(id="employee-panel")
-        # Alerts (h=3, dock bottom) — T20 Alerts widget replaces this.
         yield Static(id="alerts")
-        # Footer (h=1, dock bottom) — T22 FooterHints replaces this.
         yield Static(id="footer")
 
     # ------------------------------------------------------------------ lifecycle
 
     def on_mount(self) -> None:
-        """Start the periodic tick via ``set_interval`` using the locked wrapper.
-
-        Given: a mounted HtopTycoonApp
-        When: ``on_mount`` fires (after ``compose``)
-        Then: ``self._tick_timer`` is a ``Timer`` whose interval is
-              ``self.tick_rate`` and whose callback is ``self._tick_once``.
-
-        Note: ``set_interval`` accepts the wrapper method as a bound method
-        (Textual will call it with no arguments). The wrapper internally
-        supplies ``self.state`` to ``engine.advance``.
-        """
+        """Start the periodic tick via ``set_interval`` using the locked wrapper."""
         self._tick_timer = self.set_interval(
             self.tick_rate,
             self._tick_once,
@@ -159,94 +155,104 @@ class HtopTycoonApp(App[None]):
     # ------------------------------------------------------------------ locked wiring
 
     def _tick_once(self) -> None:
-        """Single tick — the locked wiring wrapper (NO-ARG, supplies state).
-
-        This is the ONLY correct way to drive ``TickEngine.advance`` from
-        Textual's ``set_interval``. Direct ``self.set_interval(
-        self.engine.advance, ...)`` is forbidden because:
-
-            1. ``engine.advance(state, n_ticks=1)`` requires the current
-               ``GameState`` as its first positional argument.
-            2. ``set_interval`` invokes its callback with NO arguments.
-
-        Calling ``engine.advance`` directly would raise ``TypeError`` at the
-        first tick. Wrapping in ``_tick_once`` is the only correct pattern.
-
-        Side-effects:
-            - ``self.state`` is REBOUND to a new ``GameState`` (the engine
-              returns a fresh state via ``dataclasses.replace`` — the input
-              is untouched, per the immutability invariant).
-            - ``self.event_bus.publish_many(events)`` dispatches the engine
-              output events to subscribers.
-
-        Future note: when T9 evolves to return ``(GameState, list[Event])``
-        (the AGENTS.md invariant: "pure functions return (GameState, list[Event])"),
-        this wrapper naturally consumes the tuple form — today's code uses
-        the current single-return shape and publishes an empty event list.
-        """
-        # Engine.advance is deterministic for a given (state, n_ticks) pair
-        # because the engine advances its own RNG once per tick. The output
-        # state is fresh; ``self.state`` is REBOUND, never mutated.
+        """Single tick — the locked wiring wrapper (NO-ARG, supplies state)."""
         new_state = self.engine.advance(self.state, 1)
         self.state = new_state
-        # No engine events today; ``publish_many([])`` is a safe no-op per
-        # the EventBus contract. When T9 evolves to return (state, events),
-        # swap this for ``self.engine.advance(self.state, 1)[1]`` and
-        # unpack both values.
         self.event_bus.publish_many([])
 
-    # ------------------------------------------------------------------ F-key action stubs
+    # ------------------------------------------------------------------ stub helpers
 
-    def _fire_stub(self, action_name: str, label_ko: str) -> None:
-        """Shared helper: record the stub fire and surface a notify.
+    def _open_dept_picker(self) -> None:
+        """Open the department picker overlay (stub for T25).
 
-        Each ``action_*`` stub calls this so the user sees feedback and the
-        T24 Pilot tests can assert the right action was reached.
-        ``action_name`` is the locked action id (``show_help``,
-        ``fire_selected``, ...); ``label_ko`` is the user-visible label.
+        The plan defers the real picker UI to a later todo; for T25 the
+        single-key ``u`` binding routes through this method so the
+        contract is locked. The body is intentionally empty.
         """
-        self._last_action = action_name
-        self.notify(f"{label_ko} ({action_name})")
+        return None
 
+    # ------------------------------------------------------------------ action_* delegations
+
+    # Each ``action_<name>`` below is a thin delegate to the matching
+    # function in ``action_handlers``. The bindings list points at these
+    # method names; the handler does the real work. The delegations are
+    # defined as class-level methods (not lambdas / partials) so
+    # Textual's binding dispatcher finds them via standard attribute
+    # lookup, and so mypy / IDEs see them as proper methods.
+
+    # F-row (T24)
     def action_show_help(self) -> None:
-        """F1 stub — opens the help modal (real impl in T25)."""
-        self._fire_stub("show_help", "도움말")
+        """F1 — see ``action_handlers.show_help``."""
+        action_handlers.show_help(self)
 
     def action_show_setup(self) -> None:
-        """F2 stub — opens setup/save modal (real impl in T25)."""
-        self._fire_stub("show_setup", "설정/저장")
+        """F2 — see ``action_handlers.show_setup``."""
+        action_handlers.show_setup(self)
 
     def action_search(self) -> None:
-        """F3 stub — opens search (real impl in T25)."""
-        self._fire_stub("search", "검색")
+        """F3 — see ``action_handlers.search``."""
+        action_handlers.search(self)
 
     def action_filter(self) -> None:
-        """F4 stub — opens filter (real impl in T25)."""
-        self._fire_stub("filter", "필터")
+        """F4 — see ``action_handlers.filter``."""
+        action_handlers.filter(self)
 
     def action_toggle_tree(self) -> None:
-        """F5 stub — toggles org-tree view (real impl in T25)."""
-        self._fire_stub("toggle_tree", "트리")
+        """F5 / single-key ``t`` — see ``action_handlers.toggle_tree``."""
+        action_handlers.toggle_tree(self)
 
     def action_cycle_sort(self) -> None:
-        """F6 stub — cycles sort order (real impl in T25)."""
-        self._fire_stub("cycle_sort", "정렬")
+        """F6 — see ``action_handlers.cycle_sort``."""
+        action_handlers.cycle_sort(self)
 
     def action_promote_selected(self) -> None:
-        """F7 stub — promotes the selected employee (real impl in T25)."""
-        self._fire_stub("promote_selected", "승진")
+        """F7 — see ``action_handlers.promote_selected``."""
+        action_handlers.promote_selected(self)
 
     def action_demote_selected(self) -> None:
-        """F8 stub — demotes the selected employee (real impl in T25)."""
-        self._fire_stub("demote_selected", "감봉")
+        """F8 — see ``action_handlers.demote_selected``."""
+        action_handlers.demote_selected(self)
 
     def action_fire_selected(self) -> None:
-        """F9 stub — fires the selected employee (real impl in T25)."""
-        self._fire_stub("fire_selected", "해고")
+        """F9 — see ``action_handlers.fire_selected``."""
+        action_handlers.fire_selected(self)
 
     def action_quit_or_sell(self) -> None:
-        """F10 stub — quits the game or sells the company (real impl in T25)."""
-        self._fire_stub("quit_or_sell", "종료/매각")
+        """F10 — see ``action_handlers.quit_or_sell``."""
+        action_handlers.quit_or_sell(self)
+
+    # Single-key (T25)
+    def action_filter_by_dept(self) -> None:
+        """Single-key ``u`` — see ``action_handlers.filter_by_dept``."""
+        action_handlers.filter_by_dept(self)
+
+    def action_sort_by_satisfaction(self) -> None:
+        """Single-key ``m`` — see ``action_handlers.sort_by_satisfaction``."""
+        action_handlers.sort_by_satisfaction(self)
+
+    def action_sort_by_salary(self) -> None:
+        """Single-key ``p`` — see ``action_handlers.sort_by_salary``."""
+        action_handlers.sort_by_salary(self)
+
+    def action_sort_by_time(self) -> None:
+        """Single-key ``T`` — see ``action_handlers.sort_by_time``."""
+        action_handlers.sort_by_time(self)
+
+    def action_sort_by_skill(self) -> None:
+        """Internal sort (no keybinding) — see ``action_handlers.sort_by_skill``."""
+        action_handlers.sort_by_skill(self)
+
+    def action_cursor_up(self) -> None:
+        """Single-key ``up`` — see ``action_handlers.cursor_up``."""
+        action_handlers.cursor_up(self)
+
+    def action_cursor_down(self) -> None:
+        """Single-key ``down`` — see ``action_handlers.cursor_down``."""
+        action_handlers.cursor_down(self)
+
+    def action_tag_selected(self) -> None:
+        """Single-key ``space`` — see ``action_handlers.tag_selected``."""
+        action_handlers.tag_selected(self)
 
 
 # ------------------------------------------------------------------
