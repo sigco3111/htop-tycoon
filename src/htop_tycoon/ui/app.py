@@ -235,10 +235,40 @@ class HtopTycoonApp(App[None]):
     # ------------------------------------------------------------------ locked wiring
 
     def _tick_once(self) -> None:
-        """Single tick — the locked wiring wrapper (NO-ARG, supplies state)."""
-        new_state = self.engine.advance(self.state, 1)
-        self.state = new_state
-        self.event_bus.publish(StateUpdated(state=new_state))
+        """Single tick — the locked wiring wrapper (NO-ARG, supplies state).
+
+        Drives the full per-tick pipeline (Wave 6 patch): time → products →
+        competitors → events → revenue → payroll → endings. On any ending
+        trigger, the tick timer is stopped and the game pauses for review.
+        """
+        from htop_tycoon.data import load_balance
+        from htop_tycoon.engine.cash_flow import process_payroll, process_revenue
+        from htop_tycoon.engine.competitor_ai import step_competitors
+        from htop_tycoon.engine.ending import apply_ending, evaluate_endings
+        from htop_tycoon.engine.event_chain import evaluate_events, load_events_catalog
+        from htop_tycoon.engine.product_market import tick_products
+
+        balance = load_balance()
+        events_catalog = load_events_catalog()
+        rng = self.engine._rng
+
+        state = self.engine.advance(self.state, 1)
+        state = tick_products(state, rng)
+        state, _comp_events = step_competitors(state, rng)
+        state, _fired, _scheduled = evaluate_events(
+            state, rng, balance, events_catalog, []
+        )
+        state = process_revenue(state, balance)
+        state = process_payroll(state, balance)
+        ending = evaluate_endings(state, balance)
+        if ending is not None:
+            state, _end_events = apply_ending(state, ending)
+            if self._tick_timer is not None:
+                self._tick_timer.stop()
+                self._tick_timer = None
+
+        self.state = state
+        self.event_bus.publish(StateUpdated(state=state))
         refresh_widgets_from_state(self)
         self._maybe_autosave()
 
