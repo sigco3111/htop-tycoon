@@ -96,6 +96,21 @@ class TestEventSubclasses:
         e = EmployeeDemoted(employee_id=EmployeeId("emp-003"))
         assert e.employee_id == "emp-003"
 
+    def test_employee_demoted_carries_savings_gained(self) -> None:
+        """EmployeeDemoted carries savings_gained (int) — T10 demote return shape."""
+        e = EmployeeDemoted(
+            employee_id=EmployeeId("emp-004"),
+            savings_gained=300,
+        )
+        assert e.employee_id == "emp-004"
+        assert e.savings_gained == 300
+        assert isinstance(e.savings_gained, int)
+
+    def test_employee_demoted_savings_gained_defaults_to_zero(self) -> None:
+        """EmployeeDemoted.savings_gained defaults to 0 for backward compat."""
+        e = EmployeeDemoted(employee_id=EmployeeId("emp-005"))
+        assert e.savings_gained == 0
+
     def test_competitor_action_carries_id_and_type(self) -> None:
         """CompetitorAction carries competitor_id + action_type (str)."""
         e = CompetitorAction(

@@ -41,6 +41,7 @@ __all__ = [
     "EventCondition",
     "RemoveEmployee",
     "ScheduleEnding",
+    "ScheduleNextEvent",
     "ShiftMarketShare",
     "StoryNode",
     "StoryOnChoose",
@@ -108,6 +109,22 @@ class ScheduleEnding:
     ending_type: EndingType
 
 
+@dataclasses.dataclass(frozen=True, slots=True)
+class ScheduleNextEvent:
+    """Schedule a follow-up event in the chain (T14).
+
+    Carries the id of the event to fire next. The event_chain engine reads
+    this effect when a parent event fires, then schedules the named event
+    at chain_depth + 1 (truncated by ``balance.events.max_concurrent_chain_depth``).
+
+    This effect is a control-flow directive ONLY; it carries no state mutation
+    payload of its own. It is the 7th and final variant of the Effect union.
+    """
+
+    kind: Literal["schedule_next_event"]
+    event_id: EventId
+
+
 # Union of all effect types. The runtime discriminator is ``effect.kind``;
 # the engine uses ``match``/``case`` for exhaustive dispatch.
 Effect = (
@@ -117,6 +134,7 @@ Effect = (
     | BoostRevenue
     | TriggerSecretInvestor
     | ScheduleEnding
+    | ScheduleNextEvent
 )
 
 

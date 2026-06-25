@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Callable
-from typing import Literal
+from typing import Any, Literal
 
 from htop_tycoon.domain.ending import EndingType
 from htop_tycoon.domain.state import (
@@ -128,9 +128,15 @@ class EmployeePromoted(Event):
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class EmployeeDemoted(Event):
-    """An employee was demoted (F8)."""
+    """An employee was demoted (F8).
+
+    ``savings_gained`` is the cash the company recouped from the demotion
+    (sourced from ``balance.employees.demotion_savings``); defaults to ``0``
+    for backward compatibility with earlier construction sites.
+    """
 
     employee_id: EmployeeId
+    savings_gained: int = 0
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -140,10 +146,19 @@ class CompetitorAction(Event):
     ``action_type`` is a free-form string (e.g. ``"PRICE_CUT"``,
     ``"TALENT_POACH"``, ``"MARKETING_SPREE"``); the action vocabulary
     lives in ``balance.yaml`` (``competitors.action_costs``).
+
+    ``details`` is a per-action-type payload (default empty dict):
+        - ``PRICE_CUT``: ``{"target_product": str, "share_stolen": float}``
+        - ``TALENT_POACH``: ``{"target_employee": str | None, "poached": bool,
+                                "primary_product": str | None}``
+        - ``MARKETING_SPREE``: ``{"cost_paid": int, "share_gained": float}``
+            or ``{"skipped": True, "reason": "insufficient_cash"}`` when the
+            competitor could not afford the action this tick.
     """
 
     competitor_id: CompetitorId
     action_type: str
+    details: dict[str, Any] = dataclasses.field(default_factory=dict)
 
 
 # Callback signature: ``Callable[[Event], None]``. The callback receives the
