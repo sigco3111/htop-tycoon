@@ -33,8 +33,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from textual.app import App
-from textual.containers import Horizontal
-from textual.widgets import Static
+from textual.containers import Horizontal, Vertical
+from textual.widgets import DataTable
 
 from htop_tycoon.bindings.registry import (
     register_f_bindings,
@@ -42,10 +42,20 @@ from htop_tycoon.bindings.registry import (
 )
 from htop_tycoon.data import load_balance
 from htop_tycoon.domain.state import EmployeeId, GameState, new_game
-from htop_tycoon.engine.events import EventBus
+from htop_tycoon.engine.events import EventBus, StateUpdated
 from htop_tycoon.engine.tick import TickEngine
 from htop_tycoon.persistence.serialize import save as persistence_save
 from htop_tycoon.ui import action_handlers
+from htop_tycoon.ui.app_wiring import (
+    promote_bindings_to_priority,
+    refresh_widgets_from_state,
+)
+from htop_tycoon.ui.widgets.alert import Alert
+from htop_tycoon.ui.widgets.employee_table import EmployeeTable
+from htop_tycoon.ui.widgets.footer import HtopFooter
+from htop_tycoon.ui.widgets.header import GameHeader
+from htop_tycoon.ui.widgets.metric_bar import MetricBar
+from htop_tycoon.ui.widgets.org_tree import OrgTree
 
 if TYPE_CHECKING:
     from textual.timer import Timer
@@ -100,7 +110,12 @@ class HtopTycoonApp(App[None]):
 
     # F1..F10 + single-key bindings — registered at class-body evaluation.
     # Both ``register_*`` functions return fresh lists; concatenation is
-    # safe and produces an independent list per class load.
+    # safe and produces an independent list per class load. The class
+    # attribute is locked to byte-equal the registry output (T24/T25
+    # contract); the App-level ``priority=True`` is set at RUNTIME via
+    # ``self._promote_bindings_to_priority()`` so the App wins the
+    # keypress race against child widgets without breaking the registry
+    # equality assertions in ``test_bindings_pilot.py``.
     BINDINGS: ClassVar[list[Any]] = [
         *register_f_bindings(),
         *register_single_key_bindings(),
@@ -151,18 +166,52 @@ class HtopTycoonApp(App[None]):
     def compose(self) -> Any:
         """Compose the locked 5-region layout (header / metrics / body / alerts / footer).
 
-        Each region is a ``Static`` placeholder for T16. T17-T22 will replace
-        them with real widgets (MetricBar, OrgTree, EmployeePanel, Alerts,
-        HeaderCounter, FooterHints). The IDs MUST match the locked CSS in
-        ``app.tcss``.
+        T31 wires the real T17-T22 widgets into the previously-Static
+        placeholders. The locked instance counts (6 types / 8 instances):
+            1 GameHeader  + 3 MetricBar (cpu/mem/swap) + 1 OrgTree +
+            1 EmployeeTable + 1 Alert + 1 HtopFooter.
         """
-        yield Static(id="header")
-        yield Static(id="metrics")
+        yield GameHeader(self.event_bus, id="header")
+        with Vertical(id="metrics"):
+            yield MetricBar("CPU", id="cpu")
+            yield MetricBar("MEM", id="mem")
+            yield MetricBar("SWAP", id="swap")
         with Horizontal(id="body"):
-            yield Static(id="org-tree")
-            yield Static(id="employee-panel")
-        yield Static(id="alerts")
-        yield Static(id="footer")
+            yield OrgTree(self.state, id="org-tree")
+            employees = list(self.state.employees.values())
+            table = EmployeeTable(
+                employees=employees,
+                departments=self.state.departments,
+            )
+            # EmployeeTable.__init__ doesn't accept id=; assign after
+            # construction (before mount) so the locked CSS rule
+            # ``#employee-panel { width: 1fr }`` still applies.
+            table.id = "employee-panel"
+            # Row-mode cursor: arrow keys move a row cursor; Enter emits
+            # RowSelected which the App's ``on_data_table_row_selected``
+            # handler turns into ``_selected_employee_id``.
+            table.cursor_type = "row"
+            yield table
+        yield Alert(self.event_bus, id="alerts")
+        yield HtopFooter(id="footer")
+
+    # ------------------------------------------------------------------ selection wiring
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """When the user presses Enter on an EmployeeTable row, capture the id.
+
+        Locks the contract from T31: pressing ``down`` + ``enter`` selects
+        the first employee. The DataTable already tracks the highlighted
+        row via its cursor; this handler copies the highlighted row's
+        EmployeeId into ``self._selected_employee_id`` so F7/F8/F9 can
+        act on it.
+        """
+        try:
+            emp_id = EmployeeId(str(event.row_key.value))
+        except (AttributeError, TypeError):
+            return
+        if emp_id in self.state.employees:
+            self._selected_employee_id = emp_id
 
     # ------------------------------------------------------------------ lifecycle
 
@@ -173,6 +222,15 @@ class HtopTycoonApp(App[None]):
             self._tick_once,
             name="htop-tycoon-tick",
         )
+        # Promote every registered binding to ``priority=True`` so the App
+        # wins the keypress race against child widgets (OrgTree has its own
+        # ``t``; DataTable has built-in ``up``/``down``/``space``/``enter``).
+        # Done at runtime — not by rewriting BINDINGS — to preserve the
+        # T24/T25 byte-equal registry contract.
+        promote_bindings_to_priority(self)
+        # Initial paint of header + metric bars from the current state so the
+        # first frame is non-empty (header shows tick=0, bars show ok/0%).
+        refresh_widgets_from_state(self)
 
     # ------------------------------------------------------------------ locked wiring
 
@@ -180,7 +238,8 @@ class HtopTycoonApp(App[None]):
         """Single tick — the locked wiring wrapper (NO-ARG, supplies state)."""
         new_state = self.engine.advance(self.state, 1)
         self.state = new_state
-        self.event_bus.publish_many([])
+        self.event_bus.publish(StateUpdated(state=new_state))
+        refresh_widgets_from_state(self)
         self._maybe_autosave()
 
     def _maybe_autosave(self) -> None:
