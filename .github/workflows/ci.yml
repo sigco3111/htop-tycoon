@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: test (${{ matrix.os }}, py${{ matrix.python-version }})
+    name: "test (${{ matrix.os }}, py${{ matrix.python-version }})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -41,10 +41,10 @@ jobs:
       - name: Type-check with mypy
         run: uv run mypy src/
 
-      - name: Run tests (Linux/macOS: full coverage + Pilot)
+      - name: "Run tests (Linux/macOS: full coverage + Pilot)"
         if: matrix.os != 'windows-latest'
         run: uv run pytest --cov=htop_tycoon --cov-report=term-missing
 
-      - name: Run tests (Windows: pytest only, no coverage)
+      - name: "Run tests (Windows: pytest only, no coverage)"
         if: matrix.os == 'windows-latest'
         run: uv run pytest ${{ matrix.pytest_args }}
