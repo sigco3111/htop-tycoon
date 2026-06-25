@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/htop-tycoon-v0.1.0]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+        include:
+          # Windows: pytest only, no coverage + no Pilot snapshot tests (CJK rendering quirks)
+          - os: windows-latest
+            python-version: "3.12"
+            pytest_args: "-q"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Sync dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Lint with ruff
+        run: uv run ruff check src/ tests/
+
+      - name: Type-check with mypy
+        run: uv run mypy src/
+
+      - name: Run tests (Linux/macOS: full coverage + Pilot)
+        if: matrix.os != 'windows-latest'
+        run: uv run pytest --cov=htop_tycoon --cov-report=term-missing
+
+      - name: Run tests (Windows: pytest only, no coverage)
+        if: matrix.os == 'windows-latest'
+        run: uv run pytest ${{ matrix.pytest_args }}
