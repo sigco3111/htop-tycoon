@@ -1,0 +1,62 @@
+# htop-tycoon balance tunables.
+# Single source of truth for all numeric game constants. Engine, UI, and
+# competitors must read from this file via load_balance(); do NOT hardcode
+# these values in Python. Frozen between waves; changes require plan update.
+
+time:
+  seconds_per_tick: 1.0       # 1 real sec = 1 game week
+  weeks_per_quarter: 13
+  quarters_per_year: 4
+
+money:
+  starting_cash: 50_000
+  starting_debt: 0
+  bankruptcy_cash_floor: -10_000
+  salary_tier_multiplier: 1.25   # each tier = x1.25 salary
+  fire_severance_per_tier: 2_000
+  target_revenue: 200_000      # used by later endings/IPO scoring
+
+departments:
+  starting: [Engineering]
+  unlock_costs: { Sales: 8_000, Operations: 12_000, Marketing: 18_000, Finance: 25_000 }
+  max_employees_per_dept: 8
+
+employees:
+  starting_count: 5
+  starting_skill_range: [2, 5]
+  max_skill: 10
+  starting_salary_per_week: 1000   # tier-1 hire starting salary (int)
+  promotion_cost: 500
+  demotion_savings: 300
+  zombie_satisfaction_threshold: 20   # satisfaction below this flags zombie
+
+products:
+  starting: [SaaS]
+  lifecycle_weeks: { intro: 8, growth: 26, maturity: 52, decline: 26 }
+  revenue_per_skill_point_per_week: 12
+  decline_share_loss_per_tick: 0.05   # T12: 5% share loss per tick in decline stage
+  intro_share_gain_per_tick: 0.02     # T12: 2% share gain per tick in intro stage
+
+competitors:
+  starting: [Incumbents-Co, Disruptors-Inc, Foreign-LLC]
+  aggression_default: 0.4
+  max_aggression: 1.0
+  action_costs:
+    PRICE_CUT: 0
+    TALENT_POACH: 0
+    MARKETING_SPREE: 1500
+  poach_min_skill: 7   # minimum employee skill that TALENT_POACH can target
+
+events:
+  random_event_per_tick_probability: 0.08
+  max_concurrent_chain_depth: 4
+
+endings:
+  ipo_market_cap_threshold: 1_000_000
+  hostile_ma_trigger_competitor_aggression: 0.9
+  voluntary_sale_min_cash: 200_000
+  secret_conditions: "all_depts_max_tier AND all_employees_skill_10 AND secret_investor_event_cleared"
+
+save:
+  autosave_every_n_ticks: 10
+  max_backup_files: 3

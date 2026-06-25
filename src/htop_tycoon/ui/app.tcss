@@ -1,0 +1,55 @@
+/* htop-tycoon — main layout (locked CSS, T16).
+
+Five regions + header/footer for the htop-styled business simulator:
+
+  ┌──────────────────────────────────────────────────┐  ← #header  (h=1)
+  │ tick=0  week=1  cash=...                          │
+  ├──────────────────────────────────────────────────┤  ← #metrics (h=5)
+  │ CPU [매출]   ███████████░░░  72%                  │
+  │ MEM [재고]   █████████░░░░░  58%                  │
+  │ SWP [부채]   ██░░░░░░░░░░░░  12%                  │
+  ├──────────────────┬───────────────────────────────┤  ← #body    (1fr, h)
+  │ #org-tree (30%)  │ #employee-panel (1fr)          │
+  ├──────────────────┴───────────────────────────────┤
+  │ #alerts                                          │  ← #alerts  (h=3, dock bottom)
+  │ #footer                                          │  ← #footer  (h=1, dock bottom)
+  └──────────────────────────────────────────────────┘
+
+The exact heights and widths are LOCKED in .omo/plans/htop-tycoon.md (T16).
+T17-T22 will fill in the per-region content; this file defines the skeleton.
+*/
+
+Screen {
+  layout: vertical;
+}
+
+#header {
+  height: 1;
+}
+
+#metrics {
+  height: 5;
+}
+
+#body {
+  layout: horizontal;
+  height: 1fr;
+}
+
+#org-tree {
+  width: 30%;
+}
+
+#employee-panel {
+  width: 1fr;
+}
+
+#alerts {
+  height: 3;
+  dock: bottom;
+}
+
+#footer {
+  height: 1;
+  dock: bottom;
+}
