@@ -6,6 +6,7 @@ T22 FooterHints populate this package. The list grows one widget per todo.
 
 from __future__ import annotations
 
+from htop_tycoon.ui.widgets.alert import Alert
 from htop_tycoon.ui.widgets.org_tree import OrgTree
 
-__all__: list[str] = ["OrgTree"]
+__all__: list[str] = ["Alert", "OrgTree"]
