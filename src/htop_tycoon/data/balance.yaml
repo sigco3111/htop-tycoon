@@ -25,6 +25,7 @@ employees:
   starting_count: 5
   starting_skill_range: [2, 5]
   max_skill: 10
+  starting_salary_per_week: 1000   # tier-1 hire starting salary (int)
   promotion_cost: 500
   demotion_savings: 300
   zombie_satisfaction_threshold: 20   # satisfaction below this flags zombie
@@ -33,6 +34,8 @@ products:
   starting: [SaaS]
   lifecycle_weeks: { intro: 8, growth: 26, maturity: 52, decline: 26 }
   revenue_per_skill_point_per_week: 12
+  decline_share_loss_per_tick: 0.05   # T12: 5% share loss per tick in decline stage
+  intro_share_gain_per_tick: 0.02     # T12: 2% share gain per tick in intro stage
 
 competitors:
   starting: [Incumbents-Co, Disruptors-Inc, Foreign-LLC]
