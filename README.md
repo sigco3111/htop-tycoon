@@ -1,4 +1,4 @@
-# htop-tycoon — htop-styled TUI business simulator
+# htop-tycoon — htop 경영 시뮬레이터 / htop-styled TUI Business Simulator
 
 > **Looks like server monitoring at a glance. Actually a deep business simulator.**
 > CPU = revenue, memory = inventory, swap = debt, zombie = employees at quitting risk.
@@ -6,153 +6,175 @@
 *(Korean: 화면 캡처 한 장만 봐도 서버 모니터링 같지만, 사실 회사 경영 게임.
 CPU는 매출, 메모리는 재고, 좀비 프로세스는 퇴사 위기 직원.)*
 
-See the Korean sections below for the full feature guide, key bindings, and roadmap.
-T34 will replace this skeleton with a complete bilingual README; T1 only requires a
-bilingual title + one-line description.
+![CI](https://img.shields.io/github/actions/workflow/status/sigco3111/htop-tycoon/ci.yml?style=for-the-badge&label=CI)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue?style=for-the-badge)
+![License](https://img.shields.io/github/license/sigco3111/htop-tycoon?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.1.0-green?style=for-the-badge)
+
+A terminal business simulator that disguises itself as `htop`. Same color bars, same F1-F10 key hints, same blinking red alerts — but underneath it's a deterministic seeded simulation of a company with 5 departments, 3 product types, 3 competitors, and 5 endings. Korean UI, English README, JSON save/load, ~30 minutes per playthrough.
 
 ---
 
-# 💼 htop-tycoon — htop으로 회사 경영하는 TUI 게임
+## 컨셉 / Concept
 
-> **화면 캡처 한 장만 봐도 서버 모니터링 같지만, 사실 회사 경영 게임.**
-> CPU는 매출, 메모리는 재고, 좀비 프로세스는 퇴사 위기 직원.
+`htop`과 100% 동일한 UI (막대 그래프, 트리뷰, 색상, 키바인딩)로 회사 경영 게임을 합니다. 옆에서 보면 "아 IT 운영팀이 서버 모니터링하네" 하는데 정작 게임 중.
 
-<p align="left">
-  <a href="https://github.com/sigco3111/htop-tycoon/blob/main/LICENSE"><img src="https://img.shields.io/github/license/sigco3111/htop-tycoon?style=for-the-badge" alt="License"></a>
-  <a href="https://github.com/sigco3111/htop-tycoon/stargazers"><img src="https://img.shields.io/github/stars/sigco3111/htop-tycoon?style=for-the-badge" alt="Stars"></a>
-  <a href="https://github.com/sigco3111/htop-tycoon/issues"><img src="https://img.shields.io/github/issues/sigco3111/htop-tycoon?style=for-the-badge" alt="Issues"></a>
-  <a href="https://github.com/sigco3111/idea-bank/blob/main/TUI_Game_Project_Ideas.md"><img src="https://img.shields.io/badge/idea--bank-idea%231-blue?style=for-the-badge" alt="Idea Bank #1"></a>
-</p>
+The UI is `htop` line-for-line. The data is pure deterministic simulation.
 
----
+### 메타포 / Metaphor
 
-## 🎮 컨셉
-
-`htop`과 **100% 동일한 UI**(막대 그래프, 트리뷰, 색상, 키바인딩)로 회사 경영 게임을 합니다.
-옆에서 보면 "아 IT 운영팀이 서버 모니터링하네" 하는데 정작 게임 중.
-
-### 메타포
-
-| 시스템 지표 | 회사 자원 |
-|-------------|-----------|
-| **CPU 사용률** | 매출 / 마케팅팀 생산성 |
-| **메모리 점유** | 재고 / 자산 |
-| **스왑** | 부채 / 외부 자금 |
-| **좀비 프로세스 (Z)** | 퇴사 위기 직원 |
-| **Load Average** | 시장 수요 / 주문량 |
+| 시스템 지표 / System | 회사 자원 / Company resource |
+|---|---|
+| **CPU 사용률** | 매출 / 마케팅팀 생산성 (Revenue) |
+| **메모리 점유** | 재고 / 자산 (Inventory) |
+| **스왑** | 부채 / 외부 자금 (Debt) |
+| **좀비 프로세스 (Z)** | 퇴사 위기 직원 (Resigning employees) |
+| **Load Average** | 시장 수요 / 주문량 (Demand) |
 | **nice 값** | 직원 직급 (-20=임원, +19=인턴) |
 | **업타임** | 회사 운영 기간 |
 
 ---
 
-## 🚀 빠른 시작
+## 설치 / Installation
 
 ```bash
+# from PyPI (after first release)
+pip install htop-tycoon
+htop-tycoon
+
+# from source (development)
 git clone https://github.com/sigco3111/htop-tycoon
 cd htop-tycoon
-pip install -e .
-htop-tycoon
+uv sync --all-extras --dev
+uv run python -m htop_tycoon
 ```
 
-> Python 3.11+, `textual`, `rich` 필요. (`pip install textual rich`)
+Requires Python 3.11 or 3.12 (NOT 3.13+; pinned by `requires-python` in `pyproject.toml`).
 
 ---
 
-## ⌨️ 키 바인딩 (htop과 동일)
+## 사용법 / Usage
 
-| 키 | htop 의미 | 게임 의미 |
-|----|----------|-----------|
-| `F1` / `h` | 도움말 | 게임 가이드 |
-| `F2` / `S` | 설정 | 경영 정책 편집 |
-| `F3` / `/` | 검색 | 직원/부서 검색 |
-| `F4` / `\` | 필터 | 부서별 보기 |
-| `F5` / `t` | 트리뷰 | 조직도 |
-| `F6` / `<` `>` | 정렬 | KPI별 정렬 |
-| `F7` / `]` | nice + | 승진 |
-| `F8` / `[` | nice - | 감봉 / 강등 |
-| `F9` / `k` | 프로세스 kill | **해고** ⚠️ |
-| `F10` / `q` | 종료 | 게임 종료 |
-| `Space` | 태그 | 직원 하이라이트 |
-| `u` | 유저 필터 | 부서장 단독 보기 |
-| `H` | 스레드 토글 | 부서별 업무량 |
-| `p` | 경로 | 부서 위치 |
-| `M` / `P` / `T` | 메모리/CPU/시간 정렬 | KPI별 재정렬 |
+```bash
+# Default: seed from time, 1 second per game week
+python -m htop_tycoon
 
----
+# Deterministic: same seed → same playthrough (replayable, testable)
+python -m htop_tycoon --seed=42 --tick-rate=1
 
-## 🏗️ 프로젝트 구조 (예정)
+# Fast: 1ms per tick (for testing or fast-forwarding)
+python -m htop_tycoon --seed=42 --tick-rate=0.001
 
-```
-htop-tycoon/
-├── pyproject.toml          # 패키지 설정
-├── README.md               # 이 파일
-├── LICENSE                 # MIT
-├── src/
-│   └── htop_tycoon/
-│       ├── __init__.py
-│       ├── app.py          # textual 앱 진입점
-│       ├── game.py         # 경영 시뮬레이션 엔진
-│       ├── widgets/        # 커스텀 TUI 위젯
-│       │   ├── cpu_bar.py  # CPU 막대 (=매출)
-│       │   ├── mem_bar.py  # 메모리 막대 (=재고)
-│       │   └── proc_tree.py # 직원 트리뷰
-│       └── data/
-│           └── departments.py # 부서 정의
-└── tests/
-    └── test_game.py
+# Headless: run 10000 ticks and print final state (for benchmarking)
+python -m htop_tycoon --seed=42 --tick-rate=1000 --ticks=10000 --no-autosave
+
+# Load saved game
+python -m htop_tycoon --load=~/.local/share/htop-tycoon/save.json
 ```
 
----
+CLI flags (frozen for v0.1.0):
 
-## 🛣️ 로드맵
-
-### v0.1.0 — MVP (현재)
-- [ ] 기본 htop UI (CPU/메모리 막대, 프로세스 트리뷰)
-- [ ] 단순 경영 시뮬 (직원 5명, 1개 부서, 4분기)
-- [ ] `F9` 해고, `F7/F8` 승진/감봉
-
-### v0.2.0 — 부서 확장
-- [ ] 다중 부서 (마케팅/개발/영업/경영지원)
-- [ ] 부서 간 자원 이동 (drag & drop)
-- [ ] 분기별 재무제표 (`F2` 설정창)
-
-### v0.3.0 — 멀티캠페인
-- [ ] 시장 이벤트 시스템 (경기 변동)
-- [ ] 경쟁사 등장
-- [ ] 투자 라운드 (`IPO` 키 바인딩)
-
-### v1.0.0 — 릴리즈
-- [ ] 멀티플레이어 (여러 htop 창 = 여러 회사)
-- [ ] 세이브/로드
-- [ ] Steam/itch.io 배포
-- [ ] ASCII 아트 로고
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--seed INT` | int | `time.time()` | RNG seed (deterministic playthrough) |
+| `--tick-rate FLOAT` | float | `balance.time.seconds_per_tick` | Real seconds per game tick (1 tick = 1 game week) |
+| `--load PATH` | path | XDG default | Load a saved game from this path |
+| `--no-autosave` | flag | False | Disable autosave (for tests) |
+| `--dev` | flag | False | Enable Textual dev console |
+| `--ending ENDING_TYPE` | str | None | Force-trigger a specific ending at `--ticks` boundary |
+| `--ticks N` | int | None | Headless: advance N ticks then exit (no UI) |
 
 ---
 
-## 🤝 기여
+## 키 바인딩 / Key Bindings
 
-환영! 다음 절차 권장:
+The keys map exactly to `htop`'s real keys but with game-action labels (no `F7 Nice-` / `F8 Nice+` / `F9 Kill` / `F10 Quit`).
 
-1. Issue로 컨셉 합의
-2. Fork → 브랜치 → PR
-3. `pytest tests/` 통과 필수
-
-자세한 내용은 [CONTRIBUTING.md](CONTRIBUTING.md) (예정) 참고.
+| Key | Action (Korean) | English |
+|---|---|---|
+| `F1` / `h` | 도움말 (이 화면) | Help (this screen) |
+| `F2` / `S` | 설정 / 게임 저장 | Setup / Save game |
+| `F3` / `/` | 직원 검색 | Search employee |
+| `F4` / `\` | 필터 | Filter (name/skill range) |
+| `F5` / `t` | 조직도 트리 토글 | Toggle org tree |
+| `F6` / `<` `>` | 정렬 사이클 | Cycle sort mode |
+| `F7` / `]` | 승진 (+1 tier, 비용: 500₩) | Promote |
+| `F8` / `[` | 감봉 (-1 tier, 절약: 300₩) | Demote |
+| `F9` / `k` | 해고 (퇴직금 지급) | Fire employee |
+| `F10` / `q` | 종료 / 자발적 매각 | Quit / Voluntary sale |
+| `u` | 부서 필터 | Filter by department |
+| `M` / `P` / `T` | 만족도 / 급여 / 입사순 정렬 | Sort by satisfaction / salary / tenure |
+| `Space` | 직원 태그 | Tag employee |
+| `↑` / `↓` | 이동 | Move cursor |
+| `Enter` | 선택 | Select |
+| `Q` | 모달 닫기 / 게임 종료 | Close modal / Quit game |
 
 ---
 
-## 📄 라이선스
+## 엔딩 / Endings
 
-MIT — 자세한 내용은 [LICENSE](LICENSE) 참고.
+5 endings, deterministic, mutually exclusive (highest priority wins):
+
+| # | Ending (KO) | Trigger |
+|---|---|---|
+| 1 | 파산 (Bankruptcy) | `company.cash < balance.money.bankruptcy_cash_floor` (-10,000) |
+| 2 | 적대적 인수 (Hostile M&A) | An alive competitor has `cash >= company.market_cap` AND `aggression > 0.9` |
+| 3 | 자발적 매각 (Voluntary Sale) | Player triggers sell action AND `cash >= 200,000` |
+| 4 | 상장 성공 (IPO) | `market_cap >= 1,000,000` AND `cash > 0` |
+| 5 | 비밀 엔딩 (Secret) | All 5 departments unlocked AND all employees at max_skill (10) AND `secret_investor_cleared == True` |
+
+Detailed Korean flavor text for each ending lives in `src/htop_tycoon/data/endings.yaml` and renders in the `EndingScreen` modal at game-over.
 
 ---
 
-## 🔗 관련 링크
+## 개발 / Development
 
-- 💡 [idea-bank #1](https://github.com/sigco3111/idea-bank/blob/main/TUI_Game_Project_Ideas.md) — 이 프로젝트의 모태
-- 🎮 [TUI 게임 카테고리](https://github.com/sigco3111/idea-bank/blob/main/TUI_Game_Project_Ideas.md) — 형제 프로젝트 19개
-- 🏢 [sigco3111](https://github.com/sigco3111) — 만든 사람
+```bash
+# Setup
+make install         # uv sync --all-extras --dev
+
+# Quality gates
+make test            # uv run pytest -q (full suite, 874 tests)
+make lint            # uv run ruff check src/ tests/
+make typecheck       # uv run mypy src/ (strict mode)
+
+# Run
+make run             # uv run python -m htop_tycoon
+
+# Build
+make build           # uv build (wheel + sdist into dist/)
+
+# Release (gated by preconditions)
+make release         # asserts clean tree + pyproject version matches the tag
+```
+
+Determinism invariant: same seed → identical `state_hash` at every tick. The `tests/test_playthrough.py` test pins this to a frozen literal for `seed=42 → BANKRUPTCY at tick 13` (3 consecutive runs verified).
+
+Coverage: 874 tests across 6 packages (`domain/`, `engine/`, `ui/`, `bindings/`, `persistence/`, `data/`). Targets 80%+ on `domain/ + engine/ + persistence/`.
 
 ---
 
-> **"이거 htop이야 경영 시뮬이야?" — 회사에서 누가 물어봐도 둘 다 맞는 답.**
+## 기여 / Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the PR process, code style (`ruff` + `mypy --strict`), and development setup.
+
+Issues and PRs welcome at https://github.com/sigco3111/htop-tycoon.
+
+---
+
+## 라이선스 / License
+
+[MIT](LICENSE) — see LICENSE file for full text.
+
+---
+
+## 관련 링크 / Related Links
+
+- [idea-bank #1](https://github.com/sigco3111/idea-bank/blob/main/TUI_Game_Project_Ideas.md) — the source idea
+- [Textual](https://textual.textualize.io/) — Python TUI framework powering the UI
+- [Rich](https://rich.readthedocs.io/) — terminal rendering used internally
+
+---
+
+> "이거 htop이야 경영 시뮬이야?" — 회사에서 누가 물어봐도 둘 다 맞는 답.
+> "Is that htop or a business sim?" — both answers are correct.
