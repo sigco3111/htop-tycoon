@@ -28,6 +28,8 @@ publishes the events through ``self.event_bus``.
 
 from __future__ import annotations
 
+import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from textual.app import App
@@ -38,9 +40,11 @@ from htop_tycoon.bindings.registry import (
     register_f_bindings,
     register_single_key_bindings,
 )
+from htop_tycoon.data import load_balance
 from htop_tycoon.domain.state import EmployeeId, GameState, new_game
 from htop_tycoon.engine.events import EventBus
 from htop_tycoon.engine.tick import TickEngine
+from htop_tycoon.persistence.serialize import save as persistence_save
 from htop_tycoon.ui import action_handlers
 
 if TYPE_CHECKING:
@@ -52,6 +56,21 @@ if TYPE_CHECKING:
 _CSS_FILE = "app.tcss"
 
 __all__ = ["HtopTycoonApp"]
+
+_logger = logging.getLogger(__name__)
+
+
+def _default_xdg_save_path() -> Path:
+    """Return the locked default save path: ``~/.local/share/htop-tycoon/save.json``.
+
+    Per plan line 646 (XDG Base Directory spec): the user-specific data
+    directory ``$XDG_DATA_HOME`` defaults to ``~/.local/share`` on
+    Linux. The application's save file lives at
+    ``~/.local/share/htop-tycoon/save.json``. Tests override the App's
+    ``_save_path`` attribute to point at ``tmp_path`` so the real home
+    directory is never touched.
+    """
+    return Path.home() / ".local" / "share" / "htop-tycoon" / "save.json"
 
 
 class HtopTycoonApp(App[None]):
@@ -124,6 +143,9 @@ class HtopTycoonApp(App[None]):
         # v0.1.0; bulk fire via tagged employees is deferred.
         self._tagged_employee_ids: set[EmployeeId] = set()
 
+        self._save_path: Path = _default_xdg_save_path()
+        self._autosave_every: int = self._load_autosave_every()
+
     # ------------------------------------------------------------------ layout
 
     def compose(self) -> Any:
@@ -159,6 +181,47 @@ class HtopTycoonApp(App[None]):
         new_state = self.engine.advance(self.state, 1)
         self.state = new_state
         self.event_bus.publish_many([])
+        self._maybe_autosave()
+
+    def _maybe_autosave(self) -> None:
+        """Silently save ``state`` to ``_save_path`` every N ticks.
+
+        Fires when ``state.tick`` is a positive multiple of
+        ``balance["save"]["autosave_every_n_ticks"]`` AND autosave is
+        enabled (i.e. ``no_autosave`` is False). Errors are logged but
+        do NOT propagate — autosave is a background convenience, not a
+        critical path; the user can always press F2 → Save manually.
+
+        Per plan MUST-NOT-DO: no UI feedback on success (silent save).
+        Errors are logged so a CI failure surfaces via stderr.
+        """
+        if self.no_autosave:
+            return
+        if self._autosave_every <= 0:
+            return
+        if self.state.tick <= 0:
+            return
+        if self.state.tick % self._autosave_every != 0:
+            return
+        try:
+            persistence_save(self.state, self._save_path)
+        except OSError:
+            _logger.exception(
+                "autosave failed: path=%s tick=%d", self._save_path, self.state.tick
+            )
+
+    def _load_autosave_every(self) -> int:
+        """Return the autosave cadence from ``balance.yaml``.
+
+        Cached once per App instance (balance.yaml is lru-cached by
+        ``data.load_balance``). Returns 0 if the key is missing or
+        non-positive — 0 disables autosave without raising.
+        """
+        try:
+            value = int(load_balance()["save"]["autosave_every_n_ticks"])
+        except (KeyError, TypeError, ValueError):
+            return 0
+        return max(value, 0)
 
     # ------------------------------------------------------------------ stub helpers
 
@@ -186,8 +249,17 @@ class HtopTycoonApp(App[None]):
         action_handlers.show_help(self)
 
     def action_show_setup(self) -> None:
-        """F2 — see ``action_handlers.show_setup``."""
+        """F2 — push the SetupScreen modal (save / load / new game / reset).
+
+        T29: ``action_handlers.show_setup`` previously recorded the
+        action name and notified the user. It now ALSO pushes the
+        SetupScreen so the user can interact with save/load/reset. The
+        ``_record`` call is preserved so the T24 contract (every F-key
+        sets ``_last_action``) stays green.
+        """
         action_handlers.show_setup(self)
+        from htop_tycoon.ui.screens.setup import SetupScreen as _SS
+        self.push_screen(_SS(self))
 
     def action_search(self) -> None:
         """F3 — see ``action_handlers.search``."""
