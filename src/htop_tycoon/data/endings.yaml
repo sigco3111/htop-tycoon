@@ -1,0 +1,26 @@
+# htop-tycoon endings flavor text + summary stat labels.
+# 5 Korean ending entries. Trigger conditions live in domain/ending.py (T8)
+# and engine/ending.py (T15). The SECRET entry deliberately avoids any
+# reference to its trigger (max_skill, "10", "max tier", "all departments")
+# so the mystery is preserved for the player.
+endings:
+  BANKRUPTCY:
+    title_ko: "파산"
+    summary_ko: "자금이 바닥났습니다. 회의를 개최하고 구조 계획을 세우세요."
+    stats_labels: { weeks: "생존 기간", cash_final: "최종 자금", market_cap_final: "최종 시가총액" }
+  IPO:
+    title_ko: "상장 성공"
+    summary_ko: "당신의 회사가 거래소에 상장되었습니다. 모든 직원과 투자자에게 감사합니다."
+    stats_labels: { weeks: "상장까지", market_cap_final: "상장 시가총액", employees: "최종 직원 수" }
+  HOSTILE_MA:
+    title_ko: "적대적 인수"
+    summary_ko: "경쟁사에 의해 회사가 흡수되었습니다. 주주들에게 사과합니다."
+    stats_labels: { weeks: "인수까지", acquirer: "인수 기업", payout: "주주 배당금" }
+  VOLUNTARY_SALE:
+    title_ko: "자발적 매각"
+    summary_ko: "당신은 회사를 매각하고 은퇴합니다."
+    stats_labels: { weeks: "매각까지", sale_price: "매각가", employees: "직원 인수 여부" }
+  SECRET:
+    title_ko: "비밀 엔딩"
+    summary_ko: "비밀 투자자의 정체를 알게 되었습니다. 당신은 전설이 됩니다."
+    stats_labels: { weeks: "달성까지", secret_investor: "투자자 코드명" }
