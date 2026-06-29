@@ -103,7 +103,8 @@ The keys map exactly to `htop`'s real keys but with game-action labels (no `F7 N
 | `F9` / `k` | 해고 (퇴직금 지급) | Fire employee |
 | `F10` / `q` | 종료 / 자발적 매각 | Quit / Voluntary sale |
 | `u` | 부서 필터 | Filter by department |
-| `M` / `P` / `T` | 만족도 / 급여 / 입사순 정렬 | Sort by satisfaction / salary / tenure |
+| `m` / `s` / `i` | 만족도 / 급여 / 입사순 정렬 | Sort by satisfaction / salary / tenure |
+| `p` | 일시정지 / 재생 | Pause / Resume (game clock) |
 | `Space` | 직원 태그 | Tag employee |
 | `↑` / `↓` | 이동 | Move cursor |
 | `Enter` | 선택 | Select |

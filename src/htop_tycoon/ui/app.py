@@ -13,7 +13,10 @@ Locks the contracts from ``.omo/plans/htop-tycoon.md``:
   objects (F1..F10) registered via ``bindings.registry.register_f_bindings()``.
 - T25 (line 565-585): ``BINDINGS`` further extends with 8 single-key
   ``Binding`` objects (t, u, m, p, T, up, down, space) registered via
-  ``bindings.registry.register_single_key_bindings()``. Total length: 18.
+  ``bindings.registry.register_single_key_bindings()``.
+- Wave 7: ``BINDINGS`` further extends with 1 extra single-key binding
+  (backtick → toggle_pause) registered via
+  ``bindings.registry.register_extra_bindings()``. Total length: 19.
 
 The action handler LOGIC lives in ``ui/action_handlers.py`` (split for the
 250 LOC ceiling). This module owns the App lifecycle + layout + state
@@ -34,15 +37,17 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from textual.app import App
 from textual.containers import Horizontal, Vertical
-from textual.widgets import DataTable
+from textual.widgets import Button, DataTable
 
 from htop_tycoon.bindings.registry import (
+    register_extra_bindings,
     register_f_bindings,
     register_single_key_bindings,
 )
 from htop_tycoon.data import load_balance
-from htop_tycoon.domain.state import EmployeeId, GameState, new_game
+from htop_tycoon.domain.state import EmployeeId, GameState
 from htop_tycoon.engine.events import EventBus, StateUpdated
+from htop_tycoon.engine.startup import new_started_game
 from htop_tycoon.engine.tick import TickEngine
 from htop_tycoon.persistence.serialize import save as persistence_save
 from htop_tycoon.ui import action_handlers
@@ -98,27 +103,27 @@ class HtopTycoonApp(App[None]):
 
     Class attributes:
 
-    - ``BINDINGS``: list of ``Binding`` — 10 F-row entries (T24) + 8 single-
-      key entries (T25) = 18 total, in order. Each entry's ``action``
-      resolves to an ``action_<name>`` method on this App, which delegates
-      to ``action_handlers.<name>``.
+- ``BINDINGS``: list of ``Binding`` — 10 F-row entries (T24) + 8 single-
+  key entries (T25) + 1 extra single-key entry (backtick → toggle_pause,
+  Wave 7) = 19 total, in order. Each entry's ``action`` resolves to an
+  ``action_<name>`` method on this App, which delegates to
+  ``action_handlers.<name>``.
     - ``CSS_PATH``: relative path to ``app.tcss`` (the locked CSS).
     """
 
     # Locked CSS path (relative to this module). Textual loads it at startup.
     CSS_PATH: ClassVar[str] = _CSS_FILE
 
-    # F1..F10 + single-key bindings — registered at class-body evaluation.
-    # Both ``register_*`` functions return fresh lists; concatenation is
-    # safe and produces an independent list per class load. The class
-    # attribute is locked to byte-equal the registry output (T24/T25
-    # contract); the App-level ``priority=True`` is set at RUNTIME via
-    # ``self._promote_bindings_to_priority()`` so the App wins the
-    # keypress race against child widgets without breaking the registry
-    # equality assertions in ``test_bindings_pilot.py``.
+    # F1..F10 + 8 single-key + 1 extra (backtick → toggle_pause) bindings,
+    # registered at class-body evaluation. The class attribute is locked
+    # to byte-equal the registry output (T24/T25/Wave-7 contracts);
+    # ``priority=True`` is set at RUNTIME via
+    # ``promote_bindings_to_priority`` so the App wins the keypress race
+    # against child widgets without breaking the registry equality tests.
     BINDINGS: ClassVar[list[Any]] = [
         *register_f_bindings(),
         *register_single_key_bindings(),
+        *register_extra_bindings(),
     ]
 
     def __init__(
@@ -131,17 +136,19 @@ class HtopTycoonApp(App[None]):
 
         Given: ``seed``, ``tick_rate``, ``no_autosave``
         When: ``HtopTycoonApp(...)`` is constructed
-        Then: ``self.state`` is a ``GameState`` from ``new_game(seed)``,
-              ``self.engine`` is a ``TickEngine(seed)``,
-              ``self.event_bus`` is an ``EventBus``,
-              and the three config flags are stored on the instance.
+        Then: ``self.state`` is a populated ``GameState`` from
+              ``new_started_game(seed)`` (5 employees, 1 dept, 1 product,
+              3 competitors — per Wave 6 plan amendment), ``self.engine``
+              is a ``TickEngine(seed)``, ``self.event_bus`` is an
+              ``EventBus``, and the three config flags are stored on the
+              instance.
         """
         super().__init__()
         self.seed: int = seed
         self.tick_rate: float = tick_rate
         self.no_autosave: bool = no_autosave
 
-        self.state: GameState = new_game(seed)
+        self.state: GameState = new_started_game(seed)
         self.engine: TickEngine = TickEngine(seed)
         self.event_bus: EventBus = EventBus()
 
@@ -161,6 +168,20 @@ class HtopTycoonApp(App[None]):
         self._save_path: Path = _default_xdg_save_path()
         self._autosave_every: int = self._load_autosave_every()
 
+        # Transient flag set by F10 (QuitOrSellScreen "자발적 매각" button).
+        # Consumed by the next ``_tick_once`` which threads ``player_action="sell"``
+        # into ``evaluate_endings`` so the VOLUNTARY_SALE ending can trigger.
+        self._pending_sell: bool = False
+        # Pause flag toggled by the #pause-button (UI button in the header).
+        # When True, ``_tick_once`` returns early so game time, payroll,
+        # products, and events are all frozen. Player actions (F7/F8/F9,
+        # new game, load) still work — only the per-tick clock is halted.
+        # The button is the user-facing affordance (Wave 7 rev 3) because
+        # keyboard shortcuts conflicted (F11 = macOS "Show Desktop", F12 =
+        # Textual 0.89.1 F-key prefix-match bug, backtick = Pilot/tmux
+        # key-name quirk). A visible button sidesteps all of those.
+        self._paused: bool = False
+
     # ------------------------------------------------------------------ layout
 
     def compose(self) -> Any:
@@ -170,8 +191,17 @@ class HtopTycoonApp(App[None]):
         placeholders. The locked instance counts (6 types / 8 instances):
             1 GameHeader  + 3 MetricBar (cpu/mem/swap) + 1 OrgTree +
             1 EmployeeTable + 1 Alert + 1 HtopFooter.
+
+        Wave 7 rev 3: an extra #pause-button is yielded next to the
+        GameHeader so the user can toggle pause/resume with a mouse
+        click. The button replaces the earlier keyboard bindings (F11,
+        F12, backtick) which each had a platform- or framework-level
+        conflict. The button is the only user-facing affordance for
+        the time-stop feature now.
         """
-        yield GameHeader(self.event_bus, id="header")
+        with Horizontal(id="header-row"):
+            yield GameHeader(self.event_bus, id="header")
+            yield Button("▶ 일시정지", id="pause-button", variant="primary")
         with Vertical(id="metrics"):
             yield MetricBar("CPU", id="cpu")
             yield MetricBar("MEM", id="mem")
@@ -216,7 +246,13 @@ class HtopTycoonApp(App[None]):
     # ------------------------------------------------------------------ lifecycle
 
     def on_mount(self) -> None:
-        """Start the periodic tick via ``set_interval`` using the locked wrapper."""
+        """Start the periodic tick via ``set_interval`` using the locked wrapper.
+
+        Also focuses the EmployeeTable so the user can immediately use
+        Down/Enter/Space without pressing Tab first. Without this, the
+        initial focus lands on OrgTree and F7/F8/F9 silently alert
+        "직원을 선택하세요" because no row is ever selected.
+        """
         self._tick_timer = self.set_interval(
             self.tick_rate,
             self._tick_once,
@@ -225,12 +261,119 @@ class HtopTycoonApp(App[None]):
         # Promote every registered binding to ``priority=True`` so the App
         # wins the keypress race against child widgets (OrgTree has its own
         # ``t``; DataTable has built-in ``up``/``down``/``space``/``enter``).
-        # Done at runtime — not by rewriting BINDINGS — to preserve the
-        # T24/T25 byte-equal registry contract.
         promote_bindings_to_priority(self)
         # Initial paint of header + metric bars from the current state so the
         # first frame is non-empty (header shows tick=0, bars show ok/0%).
         refresh_widgets_from_state(self)
+        # Auto-focus the EmployeeTable so Down/Enter/Space land on it
+        # without the user pressing Tab first. F7/F8/F9 then have a
+        # valid cursor target the moment the user starts navigating.
+        self._focus_employee_table()
+        # Initialize the #pause-button label + CSS class so the first
+        # frame already reflects the running state instead of the
+        # ``compose``-time static default.
+        self._wire_pause_button()
+
+    def _focus_employee_table(self) -> None:
+        """Focus the EmployeeTable so cursor keys + Enter land on it.
+
+        Called once from ``on_mount``. Wrapped in try/except because the
+        EmployeeTable ID is set in ``compose`` but Textual's focus
+        machinery is forgiving about late-mounted widgets.
+        """
+        try:
+            self.query_one("#employee-panel").focus()
+        except Exception:
+            pass
+
+    def _wire_pause_button(self) -> None:
+        """Initialize the #pause-button label + CSS class for ``_paused``.
+
+        Wave 7 rev 3: replaces the earlier keyboard bindings (F11, F12,
+        backtick) which all had platform or framework conflicts. The
+        button is the only user-facing affordance for the time-stop
+        feature; ``Button.Pressed`` message handling (vs. the ``action``
+        parameter) is used because Pilot does not reliably trigger the
+        latter.
+        """
+        self._refresh_pause_button_label()
+        self._update_header_pause_indicator()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses: route #pause-button to ``action_toggle_pause``.
+
+        Other buttons (in modal screens like SetupScreen, HelpScreen,
+        etc.) are handled by their own screen-level handlers, which
+        run first in Textual's message routing. This App-level handler
+        only fires for buttons whose message bubbles up — in practice
+        the #pause-button is the only App-level button.
+        """
+        if event.button.id == "pause-button":
+            self.action_toggle_pause()
+
+    def _refresh_pause_button_label(self) -> None:
+        """Sync the #pause-button label and ``is-paused`` CSS class to ``_paused``.
+
+        Three user-visible cues stay in lockstep: the label itself
+        (``"▶ 일시정지"`` vs ``"⏸ 재생"``), the button's background color
+        (driven by ``.is-paused`` in :file:`app.tcss`), and the
+        ``⏸ 일시정지`` prefix on the :class:`GameHeader` top-line.
+
+        Silent no-op when the button is absent (e.g. test setups that
+        bypass ``compose``).
+        """
+        try:
+            btn = self.query_one("#pause-button", Button)
+        except Exception:
+            return
+        btn.label = "⏸ 재생" if self._paused else "▶ 일시정지"
+        btn.set_class(self._paused, "is-paused")
+
+    def _update_header_pause_indicator(self) -> None:
+        """Push the current ``_paused`` flag to the mounted ``GameHeader``.
+
+        Looks up ``#header`` and calls :meth:`GameHeader.set_paused` so
+        the ``⏸ 일시정지`` prefix flips in lockstep with the button.
+        Silent no-op when the header is absent.
+        """
+        try:
+            header = self.query_one("#header", GameHeader)
+        except Exception:
+            return
+        header.set_paused(self._paused)
+
+    def _apply_state_change(self, new_state: GameState) -> None:
+        """Replace ``app.state`` and refresh every widget that depends on it.
+
+        Used by action handlers (F7/F8/F9, etc.) that mutate state via
+        ``engine_actions``. The per-tick pipeline (``_tick_once``) does
+        the same fan-out via ``refresh_widgets_from_state`` + a
+        ``StateUpdated`` publish; this helper does BOTH plus the
+        EmployeeTable/OrgTree refresh that ``refresh_widgets_from_state``
+        doesn't touch. Without it, F7/F8/F9 would update the state but
+        leave the table cells, tree, and metric bars stale.
+        """
+        from htop_tycoon.engine.events import StateUpdated
+
+        self.state = new_state
+        # Header subscribes to StateUpdated so it gets the new time /
+        # company / department / product labels. Metric bars + alert
+        # banner are also driven by this event.
+        self.event_bus.publish(StateUpdated(state=new_state))
+        refresh_widgets_from_state(self)
+        # EmployeeTable and OrgTree hold their own data (constructed
+        # once with the starting state) so they need an explicit refresh
+        # — they don't subscribe to StateUpdated because sort/filter
+        # live on the table itself.
+        from htop_tycoon.ui.widgets.employee_table import EmployeeTable
+        from htop_tycoon.ui.widgets.org_tree import OrgTree
+
+        for emp_table in self.query(EmployeeTable):
+            emp_table.refresh_from_state(
+                list(new_state.employees.values()), new_state.departments
+            )
+        for org_tree in self.query(OrgTree):
+            org_tree.refresh_from_state(new_state)
 
     # ------------------------------------------------------------------ locked wiring
 
@@ -240,7 +383,18 @@ class HtopTycoonApp(App[None]):
         Drives the full per-tick pipeline (Wave 6 patch): time → products →
         competitors → events → revenue → payroll → endings. On any ending
         trigger, the tick timer is stopped and the game pauses for review.
+        Also threads the transient ``_pending_sell`` flag into the ending
+        evaluator (consumed once per tick) so the F10 voluntary-sale
+        intent reaches the locked VOLUNTARY_SALE condition.
         """
+        # Pause gate (Wave 7 rev 2): when backtick has toggled the clock
+        # off, return BEFORE any engine pipeline runs. The ``set_interval``
+        # timer keeps firing (Textual owns the lifecycle); we just no-op
+        # the callback.
+        # All other player actions (F7/F8/F9, 새 게임, etc.) still go
+        # through their normal paths.
+        if self._paused:
+            return
         from htop_tycoon.data import load_balance
         from htop_tycoon.engine.cash_flow import process_payroll, process_revenue
         from htop_tycoon.engine.competitor_ai import step_competitors
@@ -260,7 +414,13 @@ class HtopTycoonApp(App[None]):
         )
         state = process_revenue(state, balance)
         state = process_payroll(state, balance)
-        ending = evaluate_endings(state, balance)
+        # Snapshot + clear the pending sell flag so a single F10 press
+        # triggers exactly one tick of VOLUNTARY_SALE evaluation. Without
+        # the clear, every subsequent tick would also force-sell.
+        player_action = "sell" if self._pending_sell else None
+        if self._pending_sell:
+            self._pending_sell = False
+        ending = evaluate_endings(state, balance, player_action=player_action)
         if ending is not None:
             state, _end_events = apply_ending(state, ending)
             if self._tick_timer is not None:
@@ -314,12 +474,28 @@ class HtopTycoonApp(App[None]):
 
     # ------------------------------------------------------------------ stub helpers
 
-    def _open_dept_picker(self) -> None:
-        """Open the department picker overlay (stub for T25).
+    def _employee_table(self) -> Any:
+        """Return the mounted EmployeeTable widget, or ``None`` when absent.
 
-        The plan defers the real picker UI to a later todo; for T25 the
-        single-key ``u`` binding routes through this method so the
-        contract is locked. The body is intentionally empty.
+        Centralizes the ``query_one`` lookup so action callbacks (F3/F4/u
+        + space) don't each duplicate the try/except boilerplate. Returns
+        ``None`` rather than raising because the lookup happens in a
+        Textual keypress callback path where a missing widget should
+        silently no-op (consistent with the other helpers' defensive
+        style).
+        """
+        try:
+            return self.query_one("#employee-panel")
+        except Exception:
+            return None
+
+    def _open_dept_picker(self) -> None:
+        """Open the department picker overlay (delegated to ``action_filter_by_dept``).
+
+        Kept as a no-op shim for T25 backwards compatibility — the real
+        picker UI now lives in :class:`DeptPickerScreen`, pushed by
+        ``action_filter_by_dept``. Direct calls to this method (from
+        older bindings or tests) become a no-op rather than raising.
         """
         return None
 
@@ -334,8 +510,10 @@ class HtopTycoonApp(App[None]):
 
     # F-row (T24)
     def action_show_help(self) -> None:
-        """F1 — see ``action_handlers.show_help``."""
+        """F1 — record the action then push the HelpScreen modal."""
         action_handlers.show_help(self)
+        from htop_tycoon.ui.screens.help import HelpScreen as _HS
+        self.push_screen(_HS())
 
     def action_show_setup(self) -> None:
         """F2 — push the SetupScreen modal (save / load / new game / reset).
@@ -351,12 +529,44 @@ class HtopTycoonApp(App[None]):
         self.push_screen(_SS(self))
 
     def action_search(self) -> None:
-        """F3 — see ``action_handlers.search``."""
+        """F3 — record then push SearchScreen; apply its result on dismiss.
+
+        The SearchScreen dismisses with the typed query (or ``None``).
+        On non-None we call ``EmployeeTable.filter_by_name``; on None
+        we keep any existing name filter (the user cancelled). A new
+        query overrides any prior one (search is the authoritative
+        filter for F3 within a session).
+        """
         action_handlers.search(self)
+        from htop_tycoon.ui.screens.search import SearchScreen as _SC
+
+        def _on_dismiss(result: str | None) -> None:
+            if result is None:
+                return
+            table = self._employee_table()
+            if table is not None and hasattr(table, "filter_by_name"):
+                table.filter_by_name(result)
+
+        self.push_screen(_SC(), callback=_on_dismiss)
 
     def action_filter(self) -> None:
-        """F4 — see ``action_handlers.filter``."""
+        """F4 — record then push FilterScreen; apply its result on dismiss.
+
+        The FilterScreen dismisses with ``(min, max)`` or ``None``.
+        On ``(min, max)`` we call ``EmployeeTable.filter_by_skill_range``;
+        on ``None`` we keep the current range (cancelled).
+        """
         action_handlers.filter(self)
+        from htop_tycoon.ui.screens.filter import FilterScreen as _FC
+
+        def _on_dismiss(result: tuple[int | None, int | None] | None) -> None:
+            if result is None:
+                return
+            table = self._employee_table()
+            if table is not None and hasattr(table, "filter_by_skill_range"):
+                table.filter_by_skill_range(result)
+
+        self.push_screen(_FC(), callback=_on_dismiss)
 
     def action_toggle_tree(self) -> None:
         """F5 / single-key ``t`` — see ``action_handlers.toggle_tree``."""
@@ -379,13 +589,68 @@ class HtopTycoonApp(App[None]):
         action_handlers.fire_selected(self)
 
     def action_quit_or_sell(self) -> None:
-        """F10 — see ``action_handlers.quit_or_sell``."""
+        """F10 — record then push QuitOrSellScreen; act on its result.
+
+        The QuitOrSellScreen dismisses with ``"quit"``, ``"sell"``, or
+        ``None``. ``"quit"`` calls ``self.exit()`` (Textual's standard
+        App shutdown); ``"sell"`` flags ``_pending_sell = True`` so the
+        next tick triggers the ``VOLUNTARY_SALE`` ending (per T15 contract:
+        ``ctx.player_action == "sell"``); ``None`` is a no-op cancel.
+        """
         action_handlers.quit_or_sell(self)
+
+    def action_toggle_pause(self) -> None:
+        """Toggle the per-tick clock (일시정지 / 재생).
+
+        Wave 7 rev 3: invoked by the ``#pause-button`` click handler (the
+        only user-facing affordance for the time-stop feature after the
+        F11/F12/backtick keyboard bindings all proved problematic).
+        Delegates to :func:`action_handlers.toggle_pause` which flips
+        ``self._paused``. ``_tick_once`` reads the flag and returns early
+        when paused, freezing game time, payroll, and product evolution.
+        Player actions (F7/F8/F9, 새 게임, etc.) still go through their
+        normal paths — only the automatic clock is halted, matching the
+        htop-style "pause" affordance.
+
+        We also call :meth:`_refresh_pause_button_label` so the button
+        label flips between ``"▶ 일시정지"`` (game running) and
+        ``"⏸ 재생"`` (game paused) on every click, and we propagate the
+        paused flag to the :class:`GameHeader` so the top-line indicator
+        (``⏸ 일시정지`` prefix) updates in lockstep with the button.
+
+        Must NOT push :class:`QuitOrSellScreen`: that was a copy-paste
+        regression from an earlier draft where pause shared the F10
+        binding. The pause feature has nothing to do with quit/sell and
+        pushing the modal here would cover the button the user just
+        clicked, hiding the very state change they triggered.
+        """
+        action_handlers.toggle_pause(self)
+        self._refresh_pause_button_label()
+        self._update_header_pause_indicator()
 
     # Single-key (T25)
     def action_filter_by_dept(self) -> None:
-        """Single-key ``u`` — see ``action_handlers.filter_by_dept``."""
+        """Single-key ``u`` — record then push DeptPickerScreen; apply result.
+
+        The DeptPickerScreen dismisses with the picked ``DepartmentId``
+        string, the sentinel ``"__all__`` (clear filter), or ``None``
+        (cancelled). We translate ``"__all__`` back to ``None`` and call
+        ``EmployeeTable.filter_by_department``.
+        """
         action_handlers.filter_by_dept(self)
+        from htop_tycoon.ui.screens.dept_picker import DeptPickerScreen as _DP
+
+        def _on_dismiss(result: str | None) -> None:
+            if result is None:
+                return  # cancelled
+            from htop_tycoon.domain.state import DepartmentId as _DID
+
+            dept_id = None if result == "__all__" else _DID(result)
+            table = self._employee_table()
+            if table is not None and hasattr(table, "filter_by_department"):
+                table.filter_by_department(dept_id)
+
+        self.push_screen(_DP(self), callback=_on_dismiss)
 
     def action_sort_by_satisfaction(self) -> None:
         """Single-key ``m`` — see ``action_handlers.sort_by_satisfaction``."""

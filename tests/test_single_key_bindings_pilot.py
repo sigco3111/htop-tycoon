@@ -1,4 +1,4 @@
-"""Tests for T25: Single-key BINDINGS (t, u, m, p, T, arrows, Space) + action handlers.
+"""Tests for T25: Single-key BINDINGS (t, u, m, s, i, arrows, Space) + action handlers.
 
 Locks the contract from ``.omo/plans/htop-tycoon.md`` line 565-585:
 
@@ -60,8 +60,8 @@ LOCKED_SINGLE_KEY_BINDINGS: tuple[tuple[str, str], ...] = (
     ("t", "toggle_tree"),
     ("u", "filter_by_dept"),
     ("m", "sort_by_satisfaction"),
-    ("p", "sort_by_salary"),
-    ("T", "sort_by_time"),
+    ("s", "sort_by_salary"),
+    ("i", "sort_by_time"),
     ("up", "cursor_up"),
     ("down", "cursor_down"),
     ("space", "tag_selected"),
@@ -137,19 +137,15 @@ class TestRegistrySingleKeyBindingsExact:
         The locked spec writes the shift+t key as uppercase ``T`` (htop
         style). Textual's ``Binding`` constructor stores the key as given
         in this case, so we accept ``T`` as the explicit uppercase
-        exception. All other single-character keys MUST be lowercase
-        (per Textual's documented Binding API). Multi-segment keys
-        (``up``, ``down``, ``space``) are stored verbatim because they
-        are Textual named keys, not characters.
+        All single-character keys MUST be lowercase (per the Wave-7
+        lowercase-only convention and Textual's documented Binding API).
+        Multi-segment keys (``up``, ``down``, ``space``) are stored
+        verbatim because they are Textual named keys, not characters.
         """
         result = register_single_key_bindings()
         for binding in result:
             if binding.key in {"up", "down", "space"}:
                 # Named Textual keys are stored as-is.
-                continue
-            if binding.key == "T":
-                # The plan locks "T" (uppercase shift+t). Single
-                # documented exception.
                 continue
             assert binding.key == binding.key.lower(), (
                 f"key {binding.key!r} must be lowercase per Textual's "
@@ -171,19 +167,46 @@ class TestRegistrySingleKeyBindingsExact:
 class TestAppBindingsAttribute:
     """``HtopTycoonApp.BINDINGS`` contains both F-row and single-key bindings."""
 
-    def test_app_bindings_has_eighteen_entries(self) -> None:
-        """After T25, ``BINDINGS`` has 18 entries (10 F + 8 single-key)."""
-        assert len(HtopTycoonApp.BINDINGS) == 18
+    def test_app_bindings_has_nineteen_entries(self) -> None:
+        """``BINDINGS`` has 19 entries (10 F + 8 single-key + 1 extra).
+
+        Wave 7 added one extra single-key entry (uppercase ``P`` →
+        toggle_pause) registered via ``register_extra_bindings()``.
+        The locked F1..F10 row stays at 10 and the locked single-key
+        row stays at 8. The time-stop feature is reachable both via
+        the ``#pause-button`` widget in the header and via the
+        ``P`` keypress.
+        """
+        assert len(HtopTycoonApp.BINDINGS) == 19
 
     def test_app_bindings_first_ten_match_f_bindings(self) -> None:
         """The first 10 entries match the T24 ``register_f_bindings()`` output."""
         registry_f = register_f_bindings()
         assert HtopTycoonApp.BINDINGS[:10] == registry_f
 
-    def test_app_bindings_last_eight_match_single_key_bindings(self) -> None:
-        """The last 8 entries match the T25 ``register_single_key_bindings()`` output."""
+    def test_app_bindings_middle_eight_match_single_key_bindings(self) -> None:
+        """The middle 8 entries (10..18) match ``register_single_key_bindings()``.
+
+        Renamed from ``last_eight_match_single_key_bindings`` when
+        Wave 7 added the 19th entry (uppercase ``P``). The single-key
+        block stays at indices 10..17 (length 8); the extra binding
+        lives at index 18.
+        """
         registry_sk = register_single_key_bindings()
-        assert HtopTycoonApp.BINDINGS[10:] == registry_sk
+        assert HtopTycoonApp.BINDINGS[10:18] == registry_sk
+
+    def test_app_bindings_last_entry_is_extra_pause(self) -> None:
+        """The 19th entry is the Wave-7 ``P → toggle_pause`` binding.
+
+        Asserts the exact ``Binding`` object so a future refactor that
+        silently drops the extra binding (or reorders it) fails loudly.
+        """
+        from htop_tycoon.bindings.registry import register_extra_bindings
+
+        registry_extra = register_extra_bindings()
+        assert HtopTycoonApp.BINDINGS[18:] == registry_extra
+        assert HtopTycoonApp.BINDINGS[18].key == "p"
+        assert HtopTycoonApp.BINDINGS[18].action == "toggle_pause"
 
 
 # -- App: action_* methods exist for every single-key binding --------------
@@ -193,13 +216,30 @@ class TestAppActionMethods:
     """Every bound single-key action has a corresponding ``action_*`` method."""
 
     def test_all_eight_single_key_action_methods_exist(self) -> None:
-        """For each single-key binding.action, the App has a method named action_<action>."""
-        for binding in HtopTycoonApp.BINDINGS[10:]:
+        """For each single-key binding, the App has ``action_<name>``.
+
+        Iterates ``BINDINGS[10:18]`` (the T25 single-key block at length
+        8) plus the 19th entry (backtick → toggle_pause, Wave 7) so
+        every active action method is exercised.
+        """
+        for binding in (*HtopTycoonApp.BINDINGS[10:18], HtopTycoonApp.BINDINGS[18]):
             method_name = f"action_{binding.action}"
             assert hasattr(HtopTycoonApp, method_name), (
                 f"missing {method_name} on HtopTycoonApp"
             )
             assert callable(getattr(HtopTycoonApp, method_name))
+
+    def test_toggle_pause_action_method_exists(self) -> None:
+        """The App has an ``action_toggle_pause`` method.
+
+        Wave 7: the pause feature is reachable via both affordances —
+        the ``#pause-button`` UI button (click handler in
+        ``on_button_pressed``) and the ``P`` keyboard shortcut (the
+        19th ``BINDINGS`` entry). Both paths share the same
+        ``action_toggle_pause`` method.
+        """
+        assert hasattr(HtopTycoonApp, "action_toggle_pause")
+        assert callable(HtopTycoonApp.action_toggle_pause)
 
 
 # -- Pilot: F9 fires the selected employee ---------------------------------
@@ -466,36 +506,42 @@ class TestSortBySatisfactionAndSalary:
             assert app._last_action == "sort_by_satisfaction"  # type: ignore[attr-defined]
             assert len(app._notifications) > before
 
-    async def test_p_triggers_action_sort_by_salary(self) -> None:
+    async def test_s_triggers_action_sort_by_salary(self) -> None:
         """Given: a mounted app
-        When:  pilot.press('p') fires
+        When:  pilot.press('s') fires
         Then:  action_sort_by_salary records itself and notifies.
+
+        Wave 7: ``s`` replaced ``p`` so the uppercase ``P`` shortcut
+        for pause/resume doesn't collide. The lowercase ``s`` is
+        mnemonic for "salary" and doesn't conflict with any other
+        single-key binding.
         """
         app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
         async with app.run_test() as pilot:
             await pilot.pause()
             before = len(app._notifications)
-            await pilot.press("p")
+            await pilot.press("s")
             await pilot.pause()
             assert app._last_action == "sort_by_salary"  # type: ignore[attr-defined]
             assert len(app._notifications) > before
 
-    async def test_T_triggers_action_sort_by_time_stub(self) -> None:
+    async def test_i_triggers_action_sort_by_time_stub(self) -> None:
         """Given: a mounted app
-        When:  pilot.press('T') (uppercase T) fires
+        When:  pilot.press('i') fires
         Then:  action_sort_by_time records itself and notifies.
 
-        ``T`` is uppercase because the plan locks the binding key as ``T``.
-        Textual's Binding API normalizes keys to lowercase at construction
-        time, but the spec keeps the uppercase display in the key string so
-        the locked tuple reads ``("T", "sort_by_time")``. We assert on the
-        action name only to remain agnostic of normalization.
+        Wave 7: ``i`` replaced the original ``T`` (uppercase shift+t)
+        for sort_by_time. ``i`` is a mnemonic for "i/psa" = hired
+        (the Korean label ``입사``). ``t`` was already taken by
+        ``toggle_tree`` so the lowercase slot for time had to move
+        to a different letter. The locked tuple now reads
+        ``("i", "sort_by_time")``.
         """
         app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
         async with app.run_test() as pilot:
             await pilot.pause()
             before = len(app._notifications)
-            await pilot.press("T")
+            await pilot.press("i")
             await pilot.pause()
             assert app._last_action == "sort_by_time"  # type: ignore[attr-defined]
             assert len(app._notifications) > before
@@ -507,29 +553,46 @@ class TestSortBySatisfactionAndSalary:
 class TestCursorUpDown:
     """Pressing ``up`` / ``down`` moves the table cursor (no-op until table mounted)."""
 
-    async def test_up_triggers_action_cursor_up(self) -> None:
-        """Given: a mounted app
-        When:  pilot.press('up') fires
-        Then:  action_cursor_up records itself.
-        """
-        app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
-        async with app.run_test() as pilot:
-            await pilot.pause()
-            await pilot.press("up")
-            await pilot.pause()
-            assert app._last_action == "cursor_up"  # type: ignore[attr-defined]
+    async def test_up_moves_employee_table_cursor(self) -> None:
+        """Pressing Up moves the EmployeeTable cursor up.
 
-    async def test_down_triggers_action_cursor_down(self) -> None:
-        """Given: a mounted app
-        When:  pilot.press('down') fires
-        Then:  action_cursor_down records itself.
+        With priority promotion filtering out navigation keys, the
+        EmployeeTable (which has focus by default after on_mount)
+        receives the Up keypress via its built-in ``action_cursor_up``
+        — the cursor moves to the row above. Previously the App's
+        priority binding intercepted and ran its own ``action_cursor_up``
+        that recorded ``_last_action``; now the table's own handler
+        wins, which is the user-facing behavior we care about.
         """
         app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
         async with app.run_test() as pilot:
             await pilot.pause()
+            from htop_tycoon.ui.widgets.employee_table import EmployeeTable
+            table = app.query_one(EmployeeTable)
+            # Move down once so we can move up
             await pilot.press("down")
             await pilot.pause()
-            assert app._last_action == "cursor_down"  # type: ignore[attr-defined]
+            assert table.cursor_coordinate.row == 1
+            await pilot.press("up")
+            await pilot.pause()
+            assert table.cursor_coordinate.row == 0
+
+    async def test_down_moves_employee_table_cursor(self) -> None:
+        """Pressing Down moves the EmployeeTable cursor down.
+
+        See ``test_up_moves_employee_table_cursor`` for the contract
+        change: navigation keys are no longer priority-promoted so the
+        table's built-in handler wins.
+        """
+        app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            from htop_tycoon.ui.widgets.employee_table import EmployeeTable
+            table = app.query_one(EmployeeTable)
+            assert table.cursor_coordinate.row == 0
+            await pilot.press("down")
+            await pilot.pause()
+            assert table.cursor_coordinate.row == 1
 
 
 # -- Pilot: Space tags the selected employee (stub) -----------------------
@@ -609,9 +672,124 @@ class TestF3SearchStub:
 # -- Module re-exports ----------------------------------------------------
 
 
-def test_registry_module_exposes_both_registry_functions() -> None:
-    """Both ``register_f_bindings`` and ``register_single_key_bindings`` are present."""
+def test_registry_module_exposes_all_three_registry_functions() -> None:
+    """All three registry functions are present (F-row + single-key + extra)."""
     import htop_tycoon.bindings.registry as reg
 
     assert callable(getattr(reg, "register_f_bindings", None))
     assert callable(getattr(reg, "register_single_key_bindings", None))
+    assert callable(getattr(reg, "register_extra_bindings", None))
+
+
+# -- Wave 7: p pause/resume keyboard shortcut -----------------------------
+
+
+class TestPPauseShortcut:
+    """The lowercase ``p`` key toggles pause/resume via the BINDINGS table.
+
+    Wave 7: ``p`` is bound to ``action_toggle_pause`` via
+    :func:`register_extra_bindings`. The same method is also invoked
+    by the ``#pause-button`` click handler, so the keyboard path and
+    the mouse path converge on a single state machine.
+
+    Wave 7 amendment chain:
+    - Original binding was backtick (rejected for tmux key-name issues).
+    - Then ``P`` (uppercase shift+p) was paired with sort_by_salary
+      moving to ``s`` (mnemonic for "salary").
+    - Now lowercase ``p`` is used directly so all shortcuts are
+      lowercase; ``P`` was freed up because the user requested
+      lowercase-only keys.
+    """
+
+    async def test_p_keypress_flips_paused(self) -> None:
+        """Pressing ``p`` flips ``_paused`` False → True → False.
+
+        Verifies that the BINDINGS dispatcher routes the keypress to
+        ``action_toggle_pause`` (the same method the ``#pause-button``
+        click invokes), so the keyboard and mouse affordances stay in
+        sync.
+        """
+        app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            assert app._paused is False
+            await pilot.press("p")
+            await pilot.pause()
+            assert app._paused is True, "first p press should pause"
+            await pilot.press("p")
+            await pilot.pause()
+            assert app._paused is False, "second p press should resume"
+
+    async def test_p_keypress_updates_button_label(self) -> None:
+        """Pressing ``p`` flips the #pause-button label and CSS class.
+
+        Confirms the keypress reaches ``action_toggle_pause`` (which
+        delegates to ``_refresh_pause_button_label`` + ``_update_header_pause_indicator``)
+        — not some other code path — so the visible cues stay in lockstep.
+        """
+        from textual.widgets import Button
+
+        app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            btn = app.query_one("#pause-button", Button)
+            assert "일시정지" in str(btn.label)
+            assert btn.has_class("is-paused") is False
+            await pilot.press("p")
+            await pilot.pause()
+            assert "재생" in str(btn.label)
+            assert btn.has_class("is-paused") is True
+
+    async def test_p_keypress_does_not_push_quit_modal(self) -> None:
+        """Pressing ``p`` must NOT push the F10 QuitOrSellScreen modal.
+
+        Regression guard for the Wave 7 bug where ``action_toggle_pause``
+        copy-pasted ``action_quit_or_sell``'s body and pushed the
+        modal — the user's click on the pause button (or ``p``
+        press) was immediately covered by the quit dialog, hiding
+        the very state change they triggered.
+        """
+        from htop_tycoon.ui.screens.quit_or_sell import QuitOrSellScreen
+
+        app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            assert len(app.screen_stack) == 1
+            await pilot.press("p")
+            await pilot.pause()
+            assert len(app.screen_stack) == 1, (
+                "p must not push a modal — QuitOrSellScreen"
+            )
+            assert not any(
+                isinstance(s, QuitOrSellScreen) for s in app.screen_stack
+            )
+
+    async def test_p_keypress_updates_header_indicator(self) -> None:
+        """Pressing ``p`` adds/removes the ``⏸ 일시정지`` prefix on #header.
+
+        Asserts the cross-cue sync: button label flips AND header prefix
+        flips on the same keypress, so the user sees two visible cues
+        instead of one.
+        """
+        from htop_tycoon.ui.widgets.header import GameHeader
+
+        app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            # Fire one tick so the header has a state to render against.
+            app._tick_once()
+            await pilot.pause()
+            header = app.query_one("#header", GameHeader)
+            assert "일시정지" not in str(header.renderable), (
+                "before pause: header should not show the prefix"
+            )
+            await pilot.press("p")
+            await pilot.pause()
+            assert "⏸ 일시정지" in str(header.renderable), (
+                "after pause: header should show '⏸ 일시정지' prefix"
+            )
+            await pilot.press("p")
+            await pilot.pause()
+            assert "일시정지" not in str(header.renderable), (
+                "after resume: header prefix should be gone"
+            )

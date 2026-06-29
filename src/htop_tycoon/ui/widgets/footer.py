@@ -48,8 +48,18 @@ F_ROW: str = (
 # Locked single-key row string — plan line 516. Same format as F_ROW,
 # space-separated key-label pairs. The arrows ``↑↓`` are the lock-step
 # symbol used throughout the Korean UI.
+#
+# Wave 7 amendments (all keys are lowercase):
+# - ``P:급여`` → ``s:급여`` (mnemonic for "salary").
+# - ``T:입사`` → ``i:입사`` (mnemonic for "i/psa" = hired; ``t`` was
+#   already taken by ``toggle_tree``).
+# - The trailing ``p:일시정지`` is the Wave 7 pause/resume shortcut
+#   (lowercase ``p`` → toggle_pause).
+# - ``M:만족도`` display → ``m:만족도`` for visual consistency with
+#   the lowercase-only convention (the underlying binding was
+#   already lowercase).
 SINGLE_KEY_ROW: str = (
-    "t:트리 u:부서필터 M:만족도 P:급여 T:입사 ↑↓:이동 Space:태그"
+    "t:트리 u:부서필터 m:만족도 s:급여 i:입사 ↑↓:이동 Space:태그 p:일시정지"
 )
 
 

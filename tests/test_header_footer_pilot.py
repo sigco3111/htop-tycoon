@@ -13,7 +13,7 @@ Locks the contract from ``.omo/plans/htop-tycoon.md`` line 515-524:
 
   and the single-key row is::
 
-      t:트리 u:부서필터 M:만족도 P:급여 T:입사 ↑↓:이동 Space:태그
+      t:트리 u:부서필터 m:만족도 s:급여 i:입사 ↑↓:이동 Space:태그
 
 - The footer MUST NOT use htop's original English F-key labels (F7Nice-,
   F8Nice+, F9Kill, F10Quit) — those describe real htop behavior, not this
@@ -52,9 +52,15 @@ LOCKED_F_ROW: str = (
     "F6정렬 F7승진 F8감봉 F9해고 F10매각"
 )
 
-# Plan line 516: locked single-key row labels.
+# Plan line 516 + Wave 7: locked single-key row labels. All keys
+# are lowercase. The trailing ``p:일시정지`` is the Wave-7 pause/resume
+# shortcut (lowercase ``p`` → toggle_pause) registered via
+# ``register_extra_bindings()``. The salary sort shortcut moved from
+# ``P:급여`` to ``s:급여`` (mnemonic for "salary") and the tenure sort
+# shortcut moved from ``T:입사`` to ``i:입사`` (mnemonic for "i/psa" =
+# hired; ``t`` was already taken by ``toggle_tree``).
 LOCKED_SINGLE_KEY_ROW: str = (
-    "t:트리 u:부서필터 M:만족도 P:급여 T:입사 ↑↓:이동 Space:태그"
+    "t:트리 u:부서필터 m:만족도 s:급여 i:입사 ↑↓:이동 Space:태그 p:일시정지"
 )
 
 # Forbidden: htop's original English labels do NOT describe our game actions.
@@ -427,7 +433,8 @@ class TestHtopFooterSingleKeyRow:
     async def test_footer_shows_locked_single_key_row_exactly(self) -> None:
         """The single-key row string is the locked source of truth.
 
-        Plan line 516: ``t:트리 u:부서필터 M:만족도 P:급여 T:입사 ↑↓:이동 Space:태그``
+        Plan line 516 + Wave 7 (all keys lowercase):
+        ``t:트리 u:부서필터 m:만족도 s:급여 i:입사 ↑↓:이동 Space:태그 p:일시정지``
         """
         from htop_tycoon.ui.widgets.footer import SINGLE_KEY_ROW, HtopFooter
 
@@ -438,17 +445,26 @@ class TestHtopFooterSingleKeyRow:
             assert SINGLE_KEY_ROW == LOCKED_SINGLE_KEY_ROW
 
     async def test_footer_renders_all_single_key_labels(self) -> None:
-        """All 7 single-key hint tokens appear in the rendered footer."""
+        """All 8 single-key hint tokens appear in the rendered footer.
+
+        Wave 7 amendment: the salary token moved from ``P:급여`` to
+        ``s:급여`` (so ``P`` could take the pause slot), the tenure
+        token moved from ``T:입사`` to ``i:입사``, and the pause
+        shortcut became lowercase ``p:일시정지``. All visual labels
+        are now lowercase for consistency with the lowercase-only
+        binding convention.
+        """
         from htop_tycoon.ui.widgets.footer import HtopFooter
 
         expected = [
             "t:트리",
             "u:부서필터",
-            "M:만족도",
-            "P:급여",
-            "T:입사",
+            "m:만족도",
+            "s:급여",
+            "i:입사",
             "↑↓:이동",
             "Space:태그",
+            "p:일시정지",
         ]
         app = _FooterApp()
         async with app.run_test() as pilot:

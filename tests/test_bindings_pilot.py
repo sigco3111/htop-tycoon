@@ -134,7 +134,7 @@ class TestAppBindingsAttribute:
     """``HtopTycoonApp.BINDINGS`` contains the 10 locked F1-F10 bindings.
 
     After T25 the App's BINDINGS also include the 8 single-key bindings
-    (t, u, m, p, T, up, down, space). The F-row slice still matches the
+    (t, u, m, s, i, up, down, space). The F-row slice still matches the
     locked T24 tuple; the full list has 18 entries. The tests below
     assert the F-row slice specifically (first 10 entries) so the T24
     contract stays locked.
@@ -248,7 +248,17 @@ class TestF1F9FireStubs:
 
 
 class TestOutOfListKeys:
-    """Keys not in BINDINGS (e.g., F11) must not crash and must not fire."""
+    """Keys not in BINDINGS (e.g., F11) must not crash and must not fire.
+
+    Wave 7 note: the time-stop feature has two affordances — the
+    ``#pause-button`` UI button in the header, and the lowercase
+    ``p`` keyboard shortcut registered via ``register_extra_bindings()``.
+    F11 is reserved on macOS (Show Desktop) and F12 fires F10 in
+    Textual 0.89.x (F-key prefix-match bug), so neither F-key is
+    bound; we test them here to keep the contract that unbound F-keys
+    are no-ops. The ``p`` shortcut has its own dedicated test in
+    ``tests/test_single_key_bindings_pilot.py``.
+    """
 
     async def test_f11_does_not_crash_and_does_not_fire_any_action(
         self,
@@ -256,6 +266,9 @@ class TestOutOfListKeys:
         """Given: a mounted HtopTycoonApp with no F11 binding
         When: pilot.press('f11') is sent
         Then: no exception is raised and _last_action stays None.
+
+        F11 was rejected for the pause binding because macOS reserves
+        it for "Show Desktop" / "Mission Control".
         """
         app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
         async with app.run_test() as pilot:
@@ -266,13 +279,35 @@ class TestOutOfListKeys:
             await pilot.pause()
             assert app._last_action is None  # type: ignore[attr-defined]
 
+    async def test_f12_does_not_crash_and_does_not_fire_any_action(
+        self,
+    ) -> None:
+        """Given: a mounted HtopTycoonApp with no F12 binding
+        When: pilot.press('f12') is sent
+        Then: no exception is raised and _last_action stays None.
+
+        F12 was rejected for the pause binding because Textual 0.89.1's
+        BindingsMap uses prefix matching for F-keys: an F10 binding
+        captures F12 keypresses too. Moving the binding off the F-row
+        to a single key (uppercase ``P``) avoids the conflict.
+        """
+        app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app._last_action = None  # type: ignore[attr-defined]
+            # No F12 binding exists; press must be a no-op.
+            await pilot.press("f12")
+            await pilot.pause()
+            assert app._last_action is None  # type: ignore[attr-defined]
+
     async def test_all_ten_f_keys_fire_their_action(self) -> None:
         """Exhaustive: every one of F1..F10 triggers its own action_* stub.
 
         T25 extended ``BINDINGS`` with the single-key entries; this test
         iterates only the F-row slice so the T24 contract stays locked.
-        The full 18-entry behavior (including single-key actions) is
-        pinned by ``tests/test_single_key_bindings_pilot.py``.
+        The full 19-entry behavior (including single-key actions and
+        the Wave 7 lowercase ``p`` extra) is pinned by
+        ``tests/test_single_key_bindings_pilot.py``.
         """
         app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
         async with app.run_test() as pilot:

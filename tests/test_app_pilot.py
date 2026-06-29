@@ -8,9 +8,11 @@ Locks the contract from ``.omo/plans/htop-tycoon.md`` line 434-456:
 - CSS lives in ``app.tcss`` (sibling of ``app.py``) and defines the 5 regions
   plus the header/footer: ``#header``, ``#metrics``, ``#body`` (containing
   ``#org-tree`` and ``#employee-panel``), ``#alerts``, ``#footer``.
-- ``on_mount`` initializes ``self.state`` via ``new_game(seed)``, constructs
-  ``TickEngine(seed)``, instantiates an ``EventBus``, and starts the periodic
-  tick via ``self.set_interval(tick_rate, self._tick_once)``.
+- ``on_mount`` initializes ``self.state`` via ``new_started_game(seed)``
+  (Wave 6 plan amendment — populated starting state with employees,
+  departments, products, competitors), constructs ``TickEngine(seed)``,
+  instantiates an ``EventBus``, and starts the periodic tick via
+  ``self.set_interval(tick_rate, self._tick_once)``.
 - ``_tick_once`` is the locked wiring: a no-arg wrapper around ``engine.advance``
   that supplies the current state, because Textual's ``set_interval`` passes no
   arguments to its callback. Direct ``self.set_interval(self.engine.advance, ...)``
@@ -78,9 +80,9 @@ class TestHtopTycoonAppEngineWiring:
     """``on_mount`` initializes state, engine, and event bus."""
 
     async def test_on_mount_initializes_state_engine_and_bus(self) -> None:
-        """Given: HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
+        """        Given: HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
         When: mounted via Pilot
-        Then: self.state is a GameState from new_game(42),
+        Then: self.state is a GameState from new_started_game(42),
               self.engine is a TickEngine(seed=42),
               self.event_bus is an EventBus,
               and the tick interval timer is scheduled.
@@ -251,9 +253,10 @@ def test_startup_snapshot_keys() -> None:
     assert snap["tick_rate"] == 100
     assert snap["no_autosave"] is True
     # T24 wired BINDINGS via register_f_bindings() (10 F-row entries).
-    # T25 extended it with register_single_key_bindings() (8 more entries)
-    # for a total of 18. The F-row slice stays at 10; the full list is 18.
-    assert len(snap["bindings"]) == 18
+    # T25 extended it with register_single_key_bindings() (8 more entries).
+    # Wave 7 added 1 extra single-key entry (lowercase ``p`` → toggle_pause)
+    # via register_extra_bindings(). Total: 10 F + 8 single + 1 extra = 19.
+    assert len(snap["bindings"]) == 19
     assert len(snap["bindings"][:10]) == 10
     assert snap["initial_state_tick"] == 0
     assert snap["initial_rng_seed"] == 42
@@ -284,17 +287,33 @@ def test_app_has_tick_once_method() -> None:
 # -- Pure-python sanity (no TTY, no Pilot) ----------------------------------
 
 
-def test_default_state_is_new_game_with_seed_42() -> None:
-    """Without Pilot: ``HtopTycoonApp()`` exposes the same ``new_game(42)`` state.
+def test_default_state_is_populated_via_new_started_game_with_seed_42() -> None:
+    """Without Pilot: ``HtopTycoonApp()`` exposes the populated starting state.
 
-    The Pilot-driven test above asserts the same, but this version is the
+    Per Wave 6 plan amendment (line 691) the auto-bootstrap uses
+    ``new_started_game(seed)`` (5 employees, 1 dept, 1 product,
+    3 competitors) instead of the empty ``new_game(seed)``. Without this,
+    the UI renders with an empty employee table and every F7/F8/F9 key
+    press triggers the "직원을 선택하세요" alert — see the Wave 6 user
+    bug report. This test pins the populated bootstrap as the contract.
+
+    The Pilot-driven test above asserts the same; this version is the
     cheapest smoke test (no asyncio, no driver) for quick CI feedback.
     """
+    from htop_tycoon.engine.startup import new_started_game
+
     app = HtopTycoonApp()
-    expected = new_game(42)
+    expected = new_started_game(42)
+    # Company + tick + rng_seed: identical to new_game by construction.
     assert app.state.company == expected.company
     assert app.state.tick == expected.tick
     assert app.state.rng_seed == expected.rng_seed
+    # The new contract: employees / departments / products / competitors
+    # are populated. Without these, the UI has nothing to render.
+    assert len(app.state.employees) == 5
+    assert len(app.state.departments) == 1
+    assert len(app.state.products) == 1
+    assert len(app.state.competitors) == 3
 
 
 def test_engine_is_seeded_with_same_seed() -> None:

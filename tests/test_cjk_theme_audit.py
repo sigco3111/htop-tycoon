@@ -308,7 +308,12 @@ class TestCjkWidthAudit:
     async def test_footer_single_key_row_has_no_width_drift(self) -> None:
         """Given: HtopFooter single-key row
         When:  measured via ``rich.measure`` and ``_cell_width``
-        Then:  both report 59 cells (the expected locked width)
+        Then:  both report 70 cells (the expected locked width)
+
+        Wave 7: the trailing `` `:일시정지`` shortcut adds 11 cells to
+        the original 59-cell locked row, bringing the total to 70.
+        Both widths fit comfortably in an 80-wide terminal (F_ROW is
+        72 cells on its own row).
         """
         app = _FooterHostApp()
         async with app.run_test() as pilot:
@@ -325,7 +330,7 @@ class TestCjkWidthAudit:
                 f"Footer single-key row width drift: "
                 f"measured={measured} expected={expected}"
             )
-            assert expected == 59
+            assert expected == 70
             assert plain == SINGLE_KEY_ROW
 
     async def test_header_top_line_has_no_width_drift(self) -> None:
@@ -573,7 +578,7 @@ async def test_audit_snapshot_captures_measurable_widths_and_colors() -> None:
     assert snapshot["cpu_bar_width"] == 50
     assert snapshot["cpu_bar_color"].lower() == "#00ff00"
     assert snapshot["footer_f_row_width"] == 72
-    assert snapshot["footer_sk_row_width"] == 59
+    assert snapshot["footer_sk_row_width"] == 70
     assert snapshot["header_top_line_width"] == 61
     assert snapshot["level_colors"] == {
         "ok": "#00ff00",

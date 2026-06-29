@@ -56,9 +56,14 @@ __all__ = ["GameHeader"]
 
 
 # Locked top-line format. Two-space padding around every ``|`` separator
-# matches the plan's example output exactly. The four substitution slots
-# are tick, time string, dept label, product label.
-_HEADER_FORMAT: str = "tick: {tick}  |  {time_str}  |  {dept_str}  |  {prod_str}"
+# matches the plan's example output exactly. The five substitution slots
+# are pause prefix, tick, time string, dept label, product label; the
+# pause prefix is the empty string when running and "⏸ 일시정지 | " when
+# paused (Wave 7 — the header is the second user-visible cue alongside
+# the #pause-button label).
+_HEADER_FORMAT: str = "{pause_prefix}tick: {tick}  |  {time_str}  |  {dept_str}  |  {prod_str}"
+
+_PAUSE_PREFIX: str = "⏸ 일시정지  |  "
 
 # Placeholders for the empty-departments and empty-products cases. Kept
 # short and Korean per the UI convention; the test suite asserts the
@@ -102,6 +107,11 @@ class GameHeader(Static):
         # can read which bus the header is bound to without poking at
         # private subscription lists.
         self._bus: EventBus | None = bus
+        # Wave 7: pause-state flag. Lives on the widget, not on
+        # ``GameState``, because the per-tick pipeline stops firing
+        # ``StateUpdated`` events while paused — a bus-driven flag would
+        # freeze at the last pre-pause value.
+        self._paused: bool = False
         if bus is not None:
             bus.subscribe(StateUpdated, self._on_state_updated)
 
@@ -158,11 +168,27 @@ class GameHeader(Static):
         dept_str = _first_dept_label(state)
         prod_str = _first_product_label(state)
         return _HEADER_FORMAT.format(
+            pause_prefix=_PAUSE_PREFIX if self._paused else "",
             tick=state.tick,
             time_str=time_str,
             dept_str=dept_str,
             prod_str=prod_str,
         )
+
+    def set_paused(self, paused: bool) -> None:
+        """Flip the pause-state indicator and re-render.
+
+        Wave 7: called from :meth:`HtopTycoonApp._update_header_pause_indicator`
+        on every click of the ``#pause-button``. Re-renders immediately
+        so the user sees the ``⏸ 일시정지`` prefix the moment the clock
+        halts; the next ``StateUpdated`` event is not required (and won't
+        fire while paused anyway — see the ``_paused`` attribute note in
+        :meth:`__init__`).
+        """
+        if self._paused == paused:
+            return
+        self._paused = paused
+        self.update(self._build_renderable())
 
 
 def _first_dept_label(state: GameState) -> str:
