@@ -31,6 +31,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from htop_tycoon.domain.focus import FocusChoice, FocusType
+from htop_tycoon.engine.events import Event
 from htop_tycoon.domain.state import GameState
 
 # ============================================================================
@@ -184,7 +185,33 @@ class FocusPickerScreen(ModalScreen):  # type: ignore[misc,valid-type,type-arg]
         self._app = app
 
 
+
+
+# ============================================================================
+# FocusChanged — engine signal emitted by apply_ai_suggested_focus (T44)
+# ============================================================================
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class FocusChanged(Event):
+    """Notification: a dept's focus transitioned ``prev`` -> ``next``.
+
+    Inherits from :class:`Event` so it flows through the EventBus. The
+    caller (T16 App or T9 tick engine) routes the signal:
+      * Re-render the header (footer hint ``i:전략`` updates on
+        per-dept focus changes).
+      * Re-render the DepartmentDetail panel.
+    """
+
+    kind: Literal["focus_changed"]
+    dept_id: str
+    prev: FocusType
+    next: FocusType
+    tick: int
+
+
 __all__ = [
+    "FocusChanged",
     "FocusPickerScreen",
     "apply_focus_change",
     "can_change_focus",
