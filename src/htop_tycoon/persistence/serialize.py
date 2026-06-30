@@ -14,6 +14,10 @@ Two public functions:
   ``path.with_suffix('.tmp')`` then ``os.replace``) and snapshot the
   previous file (if any) to ``path.with_suffix('.bak')``.
 
+The schema version is bumped to 2 in v0.2.0 (Wave 7 / T45) to
+capture the new ``regime`` and ``dept_focus`` fields on GameState.
+v1 saves auto-migrate on load via ``persistence.migration``.
+
 The atomic-replace guarantee: a crash mid-save leaves the previous good
 state intact at ``path``. ``os.replace`` is atomic on POSIX and Windows.
 The ``.tmp`` file may remain on disk as debris after a crash; it is
@@ -39,7 +43,7 @@ __all__ = ["SCHEMA_VERSION", "save", "serialize"]
 
 # Locked at 1 for v0.1.0. T28's corruption recovery uses this constant to
 # decide whether a payload is loadable as-is or needs migration.
-SCHEMA_VERSION: int = 1
+SCHEMA_VERSION: int = 2
 
 
 def _json_default(obj: Any) -> Any:
