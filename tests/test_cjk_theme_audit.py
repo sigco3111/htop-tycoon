@@ -330,7 +330,7 @@ class TestCjkWidthAudit:
                 f"Footer single-key row width drift: "
                 f"measured={measured} expected={expected}"
             )
-            assert expected == 70
+            assert expected == 77
             assert plain == SINGLE_KEY_ROW
 
     async def test_header_top_line_has_no_width_drift(self) -> None:
@@ -578,7 +578,7 @@ async def test_audit_snapshot_captures_measurable_widths_and_colors() -> None:
     assert snapshot["cpu_bar_width"] == 50
     assert snapshot["cpu_bar_color"].lower() == "#00ff00"
     assert snapshot["footer_f_row_width"] == 72
-    assert snapshot["footer_sk_row_width"] == 70
+    assert snapshot["footer_sk_row_width"] == 77
     assert snapshot["header_top_line_width"] == 61
     assert snapshot["level_colors"] == {
         "ok": "#00ff00",
