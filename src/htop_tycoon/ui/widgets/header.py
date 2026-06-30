@@ -92,10 +92,11 @@ REGIME_CSS_CLASSES: dict[RegimeType, str] = {
 # paused (Wave 7 — the header is the second user-visible cue alongside
 # the #pause-button label).
 _HEADER_FORMAT: str = (
-    "{pause_prefix}tick: {tick}  |  {time_str}  |  {regime_str}  |  {dept_str}  |  {prod_str}"
+    "{pause_prefix}tick: {tick}  |  {time_str}  |  {regime_str}  |  {delegate_prefix}{dept_str}  |  {prod_str}"
 )
 
 _PAUSE_PREFIX: str = "⏸ 일시정지  |  "
+_DELEGATE_PREFIX: str = "위임  |  "
 
 # Placeholders for the empty-departments and empty-products cases. Kept
 # short and Korean per the UI convention; the test suite asserts the
@@ -144,6 +145,7 @@ class GameHeader(Static):
         # ``StateUpdated`` events while paused — a bus-driven flag would
         # freeze at the last pre-pause value.
         self._paused: bool = False
+        self._delegated: bool = False  # Auto-Manager delegation flag (T39)
         if bus is not None:
             bus.subscribe(StateUpdated, self._on_state_updated)
 
@@ -202,6 +204,7 @@ class GameHeader(Static):
         dept_str = _first_dept_label(state)
         prod_str = _first_product_label(state)
         regime_str = _regime_str(state)
+        delegate_prefix = _DELEGATE_PREFIX if self._delegated else ""
         # Apply the regime CSS class. ``Static`` supports multiple classes;
         # we keep the previously-set ones if any (e.g., the pause class
         # set by ``set_paused``).
@@ -215,6 +218,7 @@ class GameHeader(Static):
             tick=state.tick,
             time_str=time_str,
             regime_str=regime_str,
+            delegate_prefix=delegate_prefix,
             dept_str=dept_str,
             prod_str=prod_str,
         )
@@ -232,6 +236,19 @@ class GameHeader(Static):
         if self._paused == paused:
             return
         self._paused = paused
+        self.update(self._build_renderable())
+
+    def set_delegated(self, delegated: bool) -> None:
+        """Flip the delegation-state indicator and re-render.
+
+        Wave 8 (delegation): called from
+        :meth:`HtopTycoonApp._update_header_delegate_indicator` on every
+        `d` keypress. Re-renders immediately so the `위임` prefix
+        appears/disappears the moment delegation toggles.
+        """
+        if self._delegated == delegated:
+            return
+        self._delegated = delegated
         self.update(self._build_renderable())
 
 

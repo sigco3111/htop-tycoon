@@ -55,6 +55,8 @@ from htop_tycoon.ui import action_handlers
 from htop_tycoon.ui.app_wiring import (
     promote_bindings_to_priority,
     refresh_widgets_from_state,
+    subscribe_focus_events,
+    subscribe_regime_events,
 )
 from htop_tycoon.ui.widgets.alert import Alert
 from htop_tycoon.ui.widgets.employee_table import EmployeeTable
@@ -268,6 +270,7 @@ class HtopTycoonApp(App[None]):
         # Initial paint of header + metric bars from the current state so the
         # first frame is non-empty (header shows tick=0, bars show ok/0%).
         refresh_widgets_from_state(self)
+        subscribe_focus_events(self)
         # Auto-focus the EmployeeTable so Down/Enter/Space land on it
         # without the user pressing Tab first. F7/F8/F9 then have a
         # valid cursor target the moment the user starts navigating.
@@ -344,6 +347,23 @@ class HtopTycoonApp(App[None]):
         except Exception:
             return
         header.set_paused(self._paused)
+
+    def _update_header_delegate_indicator(self) -> None:
+        """Push the current ``_delegated`` flag to the mounted ``#header``.
+
+        Wave 8 (delegation): called from `action_toggle_delegate` (d key
+        press) and from `check_action` (auto-disable on any non-toggle
+        action). The header is updated in lockstep with the flag so the
+        `위임` prefix is visible the moment delegation toggles.
+
+        Silent no-op when the header is not yet mounted (the ``try/except``
+        mirrors the pause indicator pattern).
+        """
+        try:
+            header = self.query_one("#header", GameHeader)
+        except Exception:
+            return
+        header.set_delegated(self._delegated)
 
     def _apply_state_change(self, new_state: GameState) -> None:
         """Replace ``app.state`` and refresh every widget that depends on it.
@@ -630,6 +650,17 @@ class HtopTycoonApp(App[None]):
         action_handlers.toggle_pause(self)
         self._refresh_pause_button_label()
         self._update_header_pause_indicator()
+
+    def action_toggle_delegate(self) -> None:
+        """Toggle the Auto-Manager (위임) delegation flag.
+
+        Bound to `d` via register_extra_bindings. The flag is on the
+        App (not on GameState — the engine state is frozen). The
+        dispatch is handled in _tick_once; the header indicator
+        refreshes immediately.
+        """
+        from htop_tycoon.ui.action_handlers import toggle_delegate
+        toggle_delegate(self)
 
     # Single-key (T25)
     def action_filter_by_dept(self) -> None:

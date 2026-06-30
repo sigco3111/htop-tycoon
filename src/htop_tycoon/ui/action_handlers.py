@@ -68,6 +68,7 @@ __all__ = [
     "sort_by_skill",
     "sort_by_time",
     "tag_selected",
+    "toggle_delegate",
     "toggle_tree",
     "cursor_down",
     "cursor_up",
@@ -296,3 +297,19 @@ def tag_selected(app: HtopTycoonApp) -> None:
         app._tagged_employee_ids.discard(eid)
     else:
         app._tagged_employee_ids.add(eid)
+
+
+def toggle_delegate(app: HtopTycoonApp) -> None:
+    """Flip the Auto-Manager delegation flag and refresh the header.
+
+    Per the delegation design spec (docs/superpowers/specs/2026-06-29):
+    pressing ``d`` toggles ``_delegated``. The header shows the
+    ``위임`` prefix when ON. The actual side-effect (header refresh)
+    is delegated to the App via the public
+    ``_update_header_delegate_indicator`` helper, which this handler
+    invokes defensively via ``hasattr`` so older App builds keep working.
+    """
+    app._delegated = not app._delegated
+    _record(app, "toggle_delegate", "위임")
+    if hasattr(app, "_update_header_delegate_indicator"):
+        app._update_header_delegate_indicator()  # type: ignore[attr-defined]  # fmt: skip
