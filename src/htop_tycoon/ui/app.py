@@ -366,6 +366,28 @@ class HtopTycoonApp(App[None]):
             return
         header.set_delegated(self._delegated)
 
+    def check_action(
+        self, action: str, parameters: tuple[object, ...]
+    ) -> bool:
+        """Pre-action hook: disable delegation on any non-toggle action.
+
+        Wave 8 (delegation): the design spec (docs/superpowers/specs/
+        2026-06-29-delegation-design.md) says "manual override disables
+        delegation" — pressing any other key (other than `d` again, or
+        `p` for pause which is independent) should auto-disable the AI.
+
+        Whitelist: `toggle_delegate` and `toggle_pause` (both keep
+        delegation as-is). Everything else flips `_delegated = False`
+        and refreshes the header indicator.
+
+        Returns True so Textual proceeds with the action (the spec
+        doesn't reject — it just disables delegation on the side).
+        """
+        if self._delegated and action not in ("toggle_delegate", "toggle_pause"):
+            self._delegated = False
+            self._update_header_delegate_indicator()
+        return True
+
     def _apply_state_change(self, new_state: GameState) -> None:
         """Replace ``app.state`` and refresh every widget that depends on it.
 
