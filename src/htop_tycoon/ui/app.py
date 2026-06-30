@@ -46,8 +46,8 @@ from htop_tycoon.bindings.registry import (
 )
 from htop_tycoon.data import load_balance
 from htop_tycoon.domain.state import EmployeeId, GameState
-from htop_tycoon.engine.ai_manager import AutoManager
-from htop_tycoon.engine.events import EventBus, StateUpdated
+from htop_tycoon.engine.ai_manager import AutoManager, Decision
+from htop_tycoon.engine.events import Event, EventBus, StateUpdated
 from htop_tycoon.engine.startup import new_started_game
 from htop_tycoon.engine.tick import TickEngine
 from htop_tycoon.persistence.serialize import save as persistence_save
@@ -154,6 +154,7 @@ class HtopTycoonApp(App[None]):
         self.state: GameState = new_started_game(seed)
         self.engine: TickEngine = TickEngine(seed)
         self.event_bus: EventBus = EventBus()
+        self._rng = self.engine._rng
 
         self._tick_timer: Timer | None = None
         self._last_action: str | None = None
@@ -409,6 +410,15 @@ class HtopTycoonApp(App[None]):
         Also threads the transient ``_pending_sell`` flag into the ending
         evaluator (consumed once per tick) so the F10 voluntary-sale
         intent reaches the locked VOLUNTARY_SALE condition.
+
+        Wave 8 (delegation): when ``_delegated`` is True, an AI block runs
+        BEFORE the normal pipeline so the AI's decisions (hire/fire/demote
+        + regime-aware focus) are applied to the pre-tick state. The AI
+        consumes rng from the engine's shared stream in a fixed order so
+        determinism is preserved. When ``_delegated`` is False (the default
+        for ``new_game(seed=42)``), the AI block is skipped entirely — no
+        rng consumption — so test_playthrough.py's frozen hash is
+        unaffected.
         """
         # Pause gate (Wave 7 rev 2): when backtick has toggled the clock
         # off, return BEFORE any engine pipeline runs. The ``set_interval``
@@ -429,7 +439,12 @@ class HtopTycoonApp(App[None]):
         events_catalog = load_events_catalog()
         rng = self.engine._rng
 
-        state = self.engine.advance(self.state, 1)
+        state = self.state
+        if self._delegated:
+            self._dispatch_auto_manager_tick(state)
+            state = self.state
+
+        state = self.engine.advance(state, 1)
         state = tick_products(state, rng)
         state, _comp_events = step_competitors(state, rng)
         state, _fired, _scheduled = evaluate_events(
@@ -454,6 +469,81 @@ class HtopTycoonApp(App[None]):
         self.event_bus.publish(StateUpdated(state=state))
         refresh_widgets_from_state(self)
         self._maybe_autosave()
+
+    def _dispatch_auto_manager_tick(self, state: GameState) -> None:
+        """Dispatch one tick of AutoManager + apply_ai_suggested_focus.
+
+        Wave 8 (delegation): when _delegated is True, the AI runs each
+        tick to emit decisions (hire/fire/demote/...) and to apply
+        regime-aware focus changes (T44's regime_aware_focus_suggestion).
+
+        The AI consumes one or more rng.float() calls per tick, so
+        determinism is preserved per GameRNG semantics.
+
+        PURE wrapper: no in-place state mutation; produces a new
+        GameState (or returns same state when no-op). The caller
+        (the existing tick pipeline) takes the returned state via
+        dataclasses.replace.
+        """
+        from htop_tycoon.engine.ai_focus_policy import apply_ai_suggested_focus
+
+        decisions = self._auto_manager.decide(state, self._rng)
+        new_state = state
+        for decision in decisions:
+            new_state, _ = self._apply_ai_decision(new_state, decision)
+
+        balance = load_balance()
+        new_state, focus_signals = apply_ai_suggested_focus(
+            new_state, balance, new_state.tick
+        )
+        for sig in focus_signals:
+            self.event_bus.publish(sig)
+
+        self.state = new_state
+
+    def _apply_ai_decision(
+        self, state: GameState, decision: Decision
+    ) -> tuple[GameState, list[Event]]:
+        """Apply one AutoManager decision to the state.
+
+        Maps:
+          - ``hire`` → engine_actions.hire(state, dept_id, self._rng)
+          - ``fire`` → engine_actions.fire(state, target)
+          - ``demote`` → engine_actions.demote(state, target)
+          - ``promote`` → engine_actions.promote(state, target)
+          - ``counter_cut`` / ``marketing_blitz`` → defensive noop with
+            AlertRaised("AI: 공격 액션 미구현 (TODO Wave 9+)", "warn")
+
+        Returns (new_state, events). The existing pipeline will publish
+        events through the bus after the AI block.
+        """
+        from htop_tycoon.engine import actions as engine_actions
+        from htop_tycoon.engine.events import AlertRaised, Event
+
+        action = decision.action
+        target = decision.target
+        events: list[Event] = []
+
+        if action == "hire":
+            new_state, evs = engine_actions.hire(state, target, self._rng)
+            return new_state, list(evs)
+        if action == "fire":
+            new_state, evs = engine_actions.fire(state, target)
+            return new_state, list(evs)
+        if action == "demote":
+            new_state, evs = engine_actions.demote(state, target)
+            return new_state, list(evs)
+        if action == "promote":
+            new_state, evs = engine_actions.promote(state, target)
+            return new_state, list(evs)
+        if action in ("counter_cut", "marketing_blitz"):
+            return state, [
+                AlertRaised(
+                    message_ko="AI: 공격 액션 미구현 (TODO Wave 9+)",
+                    severity="warn",
+                )
+            ]
+        return state, events
 
     def _maybe_autosave(self) -> None:
         """Silently save ``state`` to ``_save_path`` every N ticks.
