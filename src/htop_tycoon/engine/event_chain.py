@@ -50,6 +50,7 @@ from htop_tycoon.domain.event import (
 )
 from htop_tycoon.domain.state import EventId, GameState, ProductId
 from htop_tycoon.engine.condition_registry import CONDITION_REGISTRY
+from htop_tycoon.engine.regimes import load_regimes_from_balance
 from htop_tycoon.engine.rng import GameRNG
 
 __all__ = [
@@ -171,8 +172,7 @@ def _parse_effect(effect_dict: dict[str, Any]) -> Effect:
     builder = _EFFECT_BUILDERS.get(eff_type)
     if builder is None:
         raise ValueError(
-            f"unknown effect type {eff_type!r}; "
-            f"known types: {sorted(_EFFECT_BUILDERS.keys())}"
+            f"unknown effect type {eff_type!r}; known types: {sorted(_EFFECT_BUILDERS.keys())}"
         )
     return builder(effect_dict)
 
@@ -207,32 +207,28 @@ def _parse_event_dict(event_dict: dict[str, Any]) -> Event:
             unregistered condition names.
     """
     required = (
-        "id", "name_ko", "description_ko", "trigger_type",
-        "probability_per_tick", "effects",
+        "id",
+        "name_ko",
+        "description_ko",
+        "trigger_type",
+        "probability_per_tick",
+        "effects",
     )
     missing = [k for k in required if k not in event_dict]
     if missing:
-        raise ValueError(
-            f"event dict missing required fields {missing!r}: {event_dict!r}"
-        )
+        raise ValueError(f"event dict missing required fields {missing!r}: {event_dict!r}")
 
     trigger_type = str(event_dict["trigger_type"])
     if trigger_type not in ("random", "conditional"):
-        raise ValueError(
-            f"trigger_type must be 'random' or 'conditional', got {trigger_type!r}"
-        )
+        raise ValueError(f"trigger_type must be 'random' or 'conditional', got {trigger_type!r}")
 
     probability = float(event_dict["probability_per_tick"])
     if not 0.0 <= probability <= 1.0:
-        raise ValueError(
-            f"probability_per_tick must be in [0.0, 1.0], got {probability!r}"
-        )
+        raise ValueError(f"probability_per_tick must be in [0.0, 1.0], got {probability!r}")
 
     effects_raw = event_dict["effects"]
     if not isinstance(effects_raw, list):
-        raise ValueError(
-            f"effects must be a list, got {type(effects_raw).__name__}"
-        )
+        raise ValueError(f"effects must be a list, got {type(effects_raw).__name__}")
     effects: tuple[Effect, ...] = tuple(_parse_effect(eff) for eff in effects_raw)
 
     condition: EventCondition = _parse_condition(event_dict.get("condition"))
@@ -267,9 +263,7 @@ def load_events_catalog(path: Path | None = None) -> list[Event]:
     with yaml_path.open(encoding="utf-8") as handle:
         raw = yaml.safe_load(handle)
     if not isinstance(raw, dict):
-        raise TypeError(
-            f"events.yaml root must be a mapping, got {type(raw).__name__}"
-        )
+        raise TypeError(f"events.yaml root must be a mapping, got {type(raw).__name__}")
     events_list = raw.get("events")
     if not isinstance(events_list, list):
         raise TypeError(
@@ -291,12 +285,16 @@ def _event_triggers(
 ) -> bool:
     """Return True iff ``event`` fires this tick.
 
-    Random events roll ``rng.event(probability_per_tick)``; conditional
-    events evaluate their condition callable (which receives ``balance``
-    as the second arg).
+    Random events roll ``rng.event(probability * regime.event_probability_scale)``;
+    the regime-scale factor increases fire-rate in turbulent regimes and
+    dampens them in BOOM (per balance.yaml regimes.<TYPE>.modifiers).
+    Conditional events evaluate their condition callable (which receives
+    ``balance`` as the second arg).
     """
     if event.trigger_type == "random":
-        return rng.event(event.probability_per_tick)
+        cycles = load_regimes_from_balance(balance)
+        scale = cycles[state.regime.current].modifiers.event_probability_scale
+        return rng.event(event.probability_per_tick * scale)
     # conditional
     if event.condition is None:
         # defensive: should not happen if yaml is well-formed
@@ -314,9 +312,7 @@ def _clamp_market_share(value: float) -> float:
     return max(0.0, min(1.0, value))
 
 
-def _apply_single_effect(
-    state: GameState, effect: Effect, balance: dict[str, Any]
-) -> GameState:
+def _apply_single_effect(state: GameState, effect: Effect, balance: dict[str, Any]) -> GameState:
     """Return a new GameState with one effect applied.
 
     Pure function: does NOT mutate ``state`` (uses ``dataclasses.replace``
@@ -386,9 +382,7 @@ def _apply_single_effect(
         emp_id = effect.employee_id
         if emp_id not in state.employees:
             return state
-        new_employees = {
-            eid: emp for eid, emp in state.employees.items() if eid != emp_id
-        }
+        new_employees = {eid: emp for eid, emp in state.employees.items() if eid != emp_id}
         return dataclasses.replace(state, employees=new_employees)
 
     if isinstance(effect, ScheduleNextEvent):
@@ -498,9 +492,7 @@ def evaluate_events(
                 if new_depth < max_levels:
                     target = by_id.get(effect.event_id)
                     if target is not None:
-                        queue.append(
-                            EventInstance(event=target, chain_depth=new_depth)
-                        )
+                        queue.append(EventInstance(event=target, chain_depth=new_depth))
                 # else: truncated; the dropped follow-up is silently
                 # discarded (NOT re-queued into new_active_events).
 

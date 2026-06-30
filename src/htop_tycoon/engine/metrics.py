@@ -29,6 +29,7 @@ import dataclasses
 from typing import Any, Literal
 
 from htop_tycoon.domain.state import GameState
+from htop_tycoon.engine.regimes import load_regimes_from_balance
 
 __all__ = ["LEVEL_ORDER", "MetricsSnapshot", "compute_metrics", "level_for"]
 
@@ -109,12 +110,19 @@ def _worst_level(levels: list[Literal["ok", "warn", "alert"]]) -> Literal["ok", 
 
 
 def _compute_cpu_pct(state: GameState, balance: dict[str, Any]) -> int:
-    """cpu_pct = int(min(100, (cash + sum_revenue) / target_revenue * 100))."""
+    """cpu_pct = int(min(100, (cash + scale * sum_revenue) / target_revenue * 100)).
+
+    T38: only the FLOW (sum of revenue_per_week) is regime-scaled;
+    company.cash is a stock and remains as-is. ``NORMAL`` modifier=1.0
+    preserves the pre-T38 baseline; ``BOOM``/``CRISIS`` tilt the metric
+    by their ``revenue_multiplier``.
+    """
     target = float(balance["money"]["target_revenue"])
-    total_revenue = state.company.cash + sum(
-        product.revenue_per_week for product in state.products.values()
-    )
-    return int(min(100, total_revenue / target * 100))
+    cycles = load_regimes_from_balance(balance)
+    revenue_multiplier = cycles[state.regime.current].modifiers.revenue_multiplier
+    revenue_flow = sum(product.revenue_per_week for product in state.products.values())
+    total = state.company.cash + revenue_flow * revenue_multiplier
+    return int(min(100, total / target * 100))
 
 
 def _compute_mem_pct(state: GameState, balance: dict[str, Any]) -> int:
@@ -168,9 +176,7 @@ def compute_metrics(state: GameState, balance: dict[str, Any]) -> MetricsSnapsho
     mem_pct = _compute_mem_pct(state, balance)
     swap_pct = _compute_swap_pct(state, balance)
     zombie_count = _compute_zombie_count(state, balance)
-    level = _worst_level(
-        [level_for(cpu_pct), level_for(mem_pct), level_for(swap_pct)]
-    )
+    level = _worst_level([level_for(cpu_pct), level_for(mem_pct), level_for(swap_pct)])
     return MetricsSnapshot(
         cpu_pct=cpu_pct,
         mem_pct=mem_pct,
