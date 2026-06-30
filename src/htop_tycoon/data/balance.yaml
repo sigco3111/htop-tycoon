@@ -30,6 +30,8 @@ departments:
   # fallback (mod==1.0 for productivity / salary_growth, delta=0).
   focus:
     cooldown_weeks: 16
+    clamp_min: 0.5
+    clamp_max: 2.0  # SPEED * BOOM = 1.495 stays inside this band
     per_type:
       Engineering: { default: BALANCED, options: [BALANCED, QUALITY, SPEED, COST] }
       Sales: { default: BALANCED, options: [BALANCED, AGGRESSIVE, CONSERVATIVE, RELATIONSHIP] }
