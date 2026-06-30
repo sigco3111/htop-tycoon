@@ -785,6 +785,14 @@ class HtopTycoonApp(App[None]):
                 table.filter_by_department(dept_id)
 
         self.push_screen(_DP(self), callback=_on_dismiss)
+    def action_focus_picker(self) -> None:
+        """Open the per-dept focus picker modal (i key).
+
+        Wave 8 (T43): per-dept strategic posture (BALANCED + 3 dept-
+        specific options). Cooldown is enforced inside the modal.
+        """
+        from htop_tycoon.ui import action_handlers
+        action_handlers.focus_picker(self)
 
     def action_sort_by_satisfaction(self) -> None:
         """Single-key ``m`` — see ``action_handlers.sort_by_satisfaction``."""

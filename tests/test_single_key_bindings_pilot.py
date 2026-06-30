@@ -198,21 +198,24 @@ class TestAppBindingsAttribute:
         assert HtopTycoonApp.BINDINGS[10:18] == registry_sk
 
     def test_app_bindings_last_entries_are_extras(self) -> None:
-        """The last 2 entries are the Wave-7/8 extra bindings.
+        """The last 3 entries are the Wave-7/8 extra bindings.
 
         Asserts the exact ``Binding`` slice (so a future refactor
         that silently drops or reorders the extras fails loudly) and
-        pins the individual keys/actions at indices 18 (pause) and
-        19 (delegate).
+        pins the individual keys/actions at indices 18 (pause),
+        19 (delegate), and 20 (focus_picker).
         """
         from htop_tycoon.bindings.registry import register_extra_bindings
 
         registry_extra = register_extra_bindings()
-        assert HtopTycoonApp.BINDINGS[18:] == registry_extra
-        assert HtopTycoonApp.BINDINGS[18].key == "p"
-        assert HtopTycoonApp.BINDINGS[18].action == "toggle_pause"
-        assert HtopTycoonApp.BINDINGS[19].key == "d"
-        assert HtopTycoonApp.BINDINGS[19].action == "toggle_delegate"
+        assert len(HtopTycoonApp.BINDINGS) == 20
+        assert HtopTycoonApp.BINDINGS[17:] == registry_extra
+        assert HtopTycoonApp.BINDINGS[17].key == "p"
+        assert HtopTycoonApp.BINDINGS[17].action == "toggle_pause"
+        assert HtopTycoonApp.BINDINGS[18].key == "d"
+        assert HtopTycoonApp.BINDINGS[18].action == "toggle_delegate"
+        assert HtopTycoonApp.BINDINGS[19].key == "i"
+        assert HtopTycoonApp.BINDINGS[19].action == "focus_picker"
 
 
 # -- App: action_* methods exist for every single-key binding --------------

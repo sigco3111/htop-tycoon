@@ -69,6 +69,7 @@ __all__ = [
     "sort_by_time",
     "tag_selected",
     "toggle_delegate",
+    "focus_picker",
     "toggle_tree",
     "cursor_down",
     "cursor_up",
@@ -313,3 +314,20 @@ def toggle_delegate(app: HtopTycoonApp) -> None:
     _record(app, "toggle_delegate", "위임")
     if hasattr(app, "_update_header_delegate_indicator"):
         app._update_header_delegate_indicator()  # type: ignore[attr-defined]  # fmt: skip
+
+def focus_picker(app: HtopTycoonApp) -> None:
+    """Single-key ``i`` — open the per-dept focus picker modal.
+
+    Wave 8 (T43): the focus-picker lets the player pick a per-dept
+    strategic posture (BALANCED or one of three dept-specific options).
+    Cooldown is enforced by the modal's internal logic (per
+    `ui.screens.focus_picker.apply_focus_change` and the T43 spec).
+
+    This handler is a thin wrapper that pushes the ModalScreen. The
+    ModalScreen reads from `app.state` and `app._dispatch_auto_manager`
+    is independent of this UI flow.
+    """
+    from htop_tycoon.ui.screens.focus_picker import FocusPickerScreen
+
+    _record(app, "focus_picker", "전략")
+    app.push_screen(FocusPickerScreen(app))

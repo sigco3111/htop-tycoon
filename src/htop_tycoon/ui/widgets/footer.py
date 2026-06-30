@@ -11,7 +11,7 @@ Locks the contract from ``.omo/plans/htop-tycoon.md`` line 515-524:
 
 - The single-key row is::
 
-      t:트리 u:부서필터 m:만족도 s:급여 i:입사 ↑↓:이동 Space:태그 p:일시정지 d:위임
+      t:트리 u:부서필터 m:만족도 s:급여 i:전략 ↑↓:이동 Space:태그 p:일시정지 d:위임
 
 - The footer MUST NOT use htop's original English F-key labels
   (F7Nice-, F8Nice+, F9Kill, F10Quit) — those describe real htop behavior
@@ -51,7 +51,7 @@ F_ROW: str = (
 #
 # Wave 7 amendments (all keys are lowercase):
 # - ``P:급여`` → ``s:급여`` (mnemonic for "salary").
-# - ``T:입사`` → ``i:입사`` (mnemonic for "i/psa" = hired; ``t`` was
+# - ``T:입사`` → ``i:전략`` (mnemonic for "i/psa" = hired; ``t`` was
 #   already taken by ``toggle_tree``).
 # - The trailing ``p:일시정지`` is the Wave 7 pause/resume shortcut
 #   (lowercase ``p`` → toggle_pause).
@@ -61,7 +61,7 @@ F_ROW: str = (
 # - The trailing ``d:위임`` is the Wave 7 delegation shortcut
 #   (lowercase ``d`` → delegate selected employee).
 SINGLE_KEY_ROW: str = (
-    "t:트리 u:부서필터 m:만족도 s:급여 i:입사 ↑↓:이동 Space:태그 p:일시정지 d:위임"
+    "t:트리 u:부서필터 m:만족도 s:급여 i:전략 ↑↓:이동 Space:태그 p:일시정지 d:위임"
 )
 
 

@@ -104,7 +104,6 @@ def register_single_key_bindings() -> list[Binding]:
         Binding("u", "filter_by_dept", "부서 필터", show=False),
         Binding("m", "sort_by_satisfaction", show=False),
         Binding("s", "sort_by_salary", show=False),
-        Binding("i", "sort_by_time", show=False),
         Binding("up", "cursor_up", show=False),
         Binding("down", "cursor_down", show=False),
         Binding("space", "tag_selected", show=False),
@@ -140,4 +139,10 @@ def register_extra_bindings() -> list[Binding]:
     return [
         Binding("p", "toggle_pause", "일시정지", show=False),
         Binding("d", "toggle_delegate", "위임", show=False),
+        # Wave 8 (T43): the focus-picker modal uses the lowercase `i`
+        # key as the mnemonic for the per-dept strategic focus. The
+        # earlier WIP binding of `i` to `sort_by_time` (T25 mnemonic
+        # mismatch) was removed; sort_by_time now lives in the F6 sort
+        # cycle (locked in T19) so `i` is free for the focus picker.
+        Binding("i", "focus_picker", "전략", show=False),
     ]
