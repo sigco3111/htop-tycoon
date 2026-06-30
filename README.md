@@ -105,6 +105,7 @@ The keys map exactly to `htop`'s real keys but with game-action labels (no `F7 N
 | `u` | 부서 필터 | Filter by department |
 | `m` / `s` / `i` | 만족도 / 급여 / 입사순 정렬 | Sort by satisfaction / salary / tenure |
 | `p` | 일시정지 / 재생 | Pause / Resume (game clock) |
+| `d` | 위임 (자동 관리) | Delegate (auto-manager) |
 | `Space` | 직원 태그 | Tag employee |
 | `↑` / `↓` | 이동 | Move cursor |
 | `Enter` | 선택 | Select |

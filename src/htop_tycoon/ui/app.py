@@ -46,6 +46,7 @@ from htop_tycoon.bindings.registry import (
 )
 from htop_tycoon.data import load_balance
 from htop_tycoon.domain.state import EmployeeId, GameState
+from htop_tycoon.engine.ai_manager import AutoManager
 from htop_tycoon.engine.events import EventBus, StateUpdated
 from htop_tycoon.engine.startup import new_started_game
 from htop_tycoon.engine.tick import TickEngine
@@ -181,6 +182,8 @@ class HtopTycoonApp(App[None]):
         # Textual 0.89.1 F-key prefix-match bug, backtick = Pilot/tmux
         # key-name quirk). A visible button sidesteps all of those.
         self._paused: bool = False
+        self._delegated: bool = False  # Wave 8: Auto-Manager delegation flag
+        self._auto_manager: AutoManager = AutoManager(load_balance())
 
     # ------------------------------------------------------------------ layout
 

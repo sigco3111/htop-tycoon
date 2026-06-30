@@ -133,7 +133,11 @@ def register_extra_bindings() -> list[Binding]:
     Wave 7 amendment: ``p`` replaced the previous ``P`` (uppercase)
     pairing. The user wanted all shortcuts lowercase, and lowercase
     ``p`` was free after the salary shortcut was moved to ``s``.
+
+    Wave 8: ``d`` → ``toggle_delegate`` was added for the delegation
+    feature. The full single-key row is updated separately in T7.
     """
     return [
         Binding("p", "toggle_pause", "일시정지", show=False),
+        Binding("d", "toggle_delegate", "위임", show=False),
     ]

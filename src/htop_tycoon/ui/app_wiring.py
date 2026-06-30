@@ -31,6 +31,7 @@ from htop_tycoon.data import load_balance
 from htop_tycoon.engine.events import AlertRaised, Event
 from htop_tycoon.engine.metrics import compute_metrics
 from htop_tycoon.engine.regimes import CashShockEvent, RegimeChanged
+from htop_tycoon.ui.screens.focus_picker import FocusChanged
 from htop_tycoon.ui.widgets.metric_bar import MetricBar
 
 if TYPE_CHECKING:
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
 __all__ = [
     "promote_bindings_to_priority",
     "refresh_widgets_from_state",
+    "subscribe_focus_events",
     "subscribe_regime_events",
 ]
 
@@ -113,6 +115,24 @@ def subscribe_regime_events(app: HtopTycoonApp) -> None:
     bus.subscribe(CashShockEvent, _on_cash_shock)
 
 
+def subscribe_focus_events(app: HtopTycoonApp) -> None:
+    """Wire focus-policy signals into the UI.
+
+    T44 forward-compatibility wiring — these subscriptions are dormant
+    until the focus-policy orchestrator publishes ``FocusChanged``
+    from the engine tick loop, but the code is in place now so flipping
+    the tick integration on is a one-line change without UI changes.
+    Subscribers:
+
+      * ``FocusChanged`` → re-publish ``StateUpdated`` so the header
+        (footer hint ``i:전략``) and the DepartmentDetail panel refresh
+        the moment a per-dept focus transition fires, not the next
+        ``StateUpdated``.
+    """
+    bus = app.event_bus
+    bus.subscribe(FocusChanged, _on_focus_changed)
+
+
 def _on_regime_changed(event: Event) -> None:
     if not isinstance(event, RegimeChanged):
         return
@@ -132,6 +152,12 @@ def _on_regime_changed(event: Event) -> None:
     # in the engine tick orchestrator (T40+), which calls refresh_widgets_from_state
     # via the F1 help / state-publish path. We subscribe here as a no-op
     # safety net for direct engine broadcasts.
+    return
+
+
+def _on_focus_changed(event: Event) -> None:
+    if not isinstance(event, FocusChanged):
+        return
     return
 
 
