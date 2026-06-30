@@ -22,6 +22,7 @@ from typing import Any, Literal
 
 from htop_tycoon.domain.regimes import RegimeState, RegimeType
 from htop_tycoon.domain.state import GameState
+from htop_tycoon.engine.events import Event
 from htop_tycoon.engine.rng import GameRNG
 
 # Locked ranges (T36). The engine integration in T38 may add a clamp at
@@ -42,8 +43,10 @@ AlertSeverity = Literal["info", "warn", "alert"]
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class RegimeChanged:
+class RegimeChanged(Event):
     """Notification: the active regime transitioned ``prev`` -> ``next``.
+
+    Inherits from ``Event`` so it can flow through the bus.
 
     Emitted by ``regime_step()`` exactly when the active cycle's
     ``max_weeks_in_regime`` boundary is crossed. The caller publishes
@@ -59,8 +62,10 @@ class RegimeChanged:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CashShockEvent:
+class CashShockEvent(Event):
     """Notification: a CRISIS cash shock just deducted ``amount`` from cash.
+
+    Inherits from ``Event`` so it can flow through the bus.
 
     ``amount`` is a negative int (deduction). Severity is always
     ``"alert"`` because cash shock is the most disruptive regime
