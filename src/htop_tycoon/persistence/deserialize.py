@@ -79,8 +79,11 @@ def deserialize(data: dict[str, Any]) -> GameState:
     corrupt JSON into a playable game.
     """
     try:
-        # 1. Schema version check. Missing key, wrong type, or wrong value
-        #    all funnel into recovery.
+        # 1. Schema version check. Missing key or wrong type funnels
+        #    into recovery. A version=1 payload is auto-migrated to v2
+        #    (Wave 7 / T45) via upgrade_v1_to_v2. Versions > SCHEMA_VERSION
+        #    fall through to recovery (future migration plan must add
+        #    an upgrade_vN_to_v2 step).
         version_raw = data["version"]  # KeyError -> recovery
         if not isinstance(version_raw, int) or isinstance(version_raw, bool):
             _logger.warning(
@@ -88,7 +91,16 @@ def deserialize(data: dict[str, Any]) -> GameState:
                 type(version_raw).__name__,
             )
             return _recovery_state()
-        if version_raw != SCHEMA_VERSION:
+        if version_raw < SCHEMA_VERSION:
+            # Migrate every older version up through SCHEMA_VERSION.
+            from htop_tycoon.persistence.migration import upgrade_v1_to_v2
+
+            upgraded = upgrade_v1_to_v2(data)
+            _logger.info(
+                "deserialize: migrated save from v1 -> v2 (regime + dept_focus default)"
+            )
+            return deserialize(upgraded)
+        if version_raw > SCHEMA_VERSION:
             _logger.warning(
                 "deserialize: unknown schema version %r (expected %d); recovering",
                 version_raw,

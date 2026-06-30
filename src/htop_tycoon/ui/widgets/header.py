@@ -49,10 +49,40 @@ from textual.widgets import Static
 
 from htop_tycoon.domain.dept import Department
 from htop_tycoon.domain.product import Product
+from htop_tycoon.domain.regimes import RegimeType
 from htop_tycoon.domain.state import GameState
 from htop_tycoon.engine.events import Event, EventBus, StateUpdated
 
-__all__ = ["GameHeader"]
+__all__ = [
+    "GameHeader",
+    "REGIME_CSS_CLASSES",
+    "REGIME_LABELS_KO",
+    "REGIME_TRENDS",
+]
+
+
+# Wave 7 (T39): regime indicator tables. Korean labels are user-visible;
+# ASCII trends mirror htop's right-arrow conventions. CSS classes drive
+# the colour scheme defined in ``ui/app.tcss`` -- no hard-coded colour
+# values in this module.
+REGIME_LABELS_KO: dict[RegimeType, str] = {
+    RegimeType.BOOM: "호황",
+    RegimeType.NORMAL: "보통",
+    RegimeType.RECESSION: "침체",
+    RegimeType.CRISIS: "위기",
+}
+REGIME_TRENDS: dict[RegimeType, str] = {
+    RegimeType.BOOM: "↗",
+    RegimeType.NORMAL: "→",
+    RegimeType.RECESSION: "↘",
+    RegimeType.CRISIS: "‼",
+}
+REGIME_CSS_CLASSES: dict[RegimeType, str] = {
+    RegimeType.BOOM: "regime-boom",
+    RegimeType.NORMAL: "regime-normal",
+    RegimeType.RECESSION: "regime-recession",
+    RegimeType.CRISIS: "regime-crisis",
+}
 
 
 # Locked top-line format. Two-space padding around every ``|`` separator
@@ -61,7 +91,9 @@ __all__ = ["GameHeader"]
 # pause prefix is the empty string when running and "⏸ 일시정지 | " when
 # paused (Wave 7 — the header is the second user-visible cue alongside
 # the #pause-button label).
-_HEADER_FORMAT: str = "{pause_prefix}tick: {tick}  |  {time_str}  |  {dept_str}  |  {prod_str}"
+_HEADER_FORMAT: str = (
+    "{pause_prefix}tick: {tick}  |  {time_str}  |  {regime_str}  |  {dept_str}  |  {prod_str}"
+)
 
 _PAUSE_PREFIX: str = "⏸ 일시정지  |  "
 
@@ -156,21 +188,33 @@ class GameHeader(Static):
         the non-empty case, picks the first department (insertion order)
         and the first product (insertion order); falls back to the
         empty-state placeholders when those collections are empty.
+
+        The ``regime_str`` slot (Wave 7 / T39) is ``<공백-prefix>경기:<label_ko><trend>``
+        and is also applied as a CSS class on the widget so the colour
+        scheme in ``ui/app.tcss`` can target per-regime highlights.
         """
         state = self._state
         if state is None:
             return ""
         time_str = (
-            f"{state.game_time.year}년 "
-            f"{state.game_time.quarter}분기 "
-            f"{state.game_time.week}주차"
+            f"{state.game_time.year}년 {state.game_time.quarter}분기 {state.game_time.week}주차"
         )
         dept_str = _first_dept_label(state)
         prod_str = _first_product_label(state)
+        regime_str = _regime_str(state)
+        # Apply the regime CSS class. ``Static`` supports multiple classes;
+        # we keep the previously-set ones if any (e.g., the pause class
+        # set by ``set_paused``).
+        new_class = REGIME_CSS_CLASSES[state.regime.current]
+        for cls in REGIME_CSS_CLASSES.values():
+            if cls != new_class:
+                self.remove_class(cls)
+        self.add_class(new_class)
         return _HEADER_FORMAT.format(
             pause_prefix=_PAUSE_PREFIX if self._paused else "",
             tick=state.tick,
             time_str=time_str,
+            regime_str=regime_str,
             dept_str=dept_str,
             prod_str=prod_str,
         )
@@ -207,6 +251,16 @@ def _first_dept_label(state: GameState) -> str:
     if not isinstance(first_dept, Department):  # pragma: no cover - defensive
         return _EMPTY_DEPT_LABEL
     return f"{first_dept.type.value}·{len(first_dept.employee_ids)}명"
+
+
+def _regime_str(state: GameState) -> str:
+    """Return the ``경기:<label_ko><trend>`` slot for the active regime.
+
+    Pure helper: maps ``state.regime.current`` through
+    :data:`REGIME_LABELS_KO` and :data:`REGIME_TRENDS`.
+    """
+    rt = state.regime.current
+    return f"경기:{REGIME_LABELS_KO[rt]}{REGIME_TRENDS[rt]}"
 
 
 def _first_product_label(state: GameState) -> str:
