@@ -56,7 +56,6 @@ from htop_tycoon.ui.app_wiring import (
     promote_bindings_to_priority,
     refresh_widgets_from_state,
     subscribe_focus_events,
-    subscribe_regime_events,
 )
 from htop_tycoon.ui.widgets.alert import Alert
 from htop_tycoon.ui.widgets.employee_table import EmployeeTable
@@ -94,24 +93,24 @@ def _default_xdg_save_path() -> Path:
 class HtopTycoonApp(App[None]):
     """The htop-tycoon Textual App — 5-region locked layout + locked tick wiring.
 
-    Construction parameters:
+        Construction parameters:
 
-    - ``seed`` (default ``42``): RNG seed for ``new_game`` AND ``TickEngine``.
-      Same seed must be used for both so the engine's RNG stream matches the
-      state seed (determinism invariant).
-    - ``tick_rate`` (default ``1.0``): real seconds per tick (1 tick = 1 game
-      week per the AGENTS.md time-scale invariant).
-    - ``no_autosave`` (default ``False``): wired in T30; the App stores the
-      flag today but does not act on it.
+        - ``seed`` (default ``42``): RNG seed for ``new_game`` AND ``TickEngine``.
+          Same seed must be used for both so the engine's RNG stream matches the
+          state seed (determinism invariant).
+        - ``tick_rate`` (default ``1.0``): real seconds per tick (1 tick = 1 game
+          week per the AGENTS.md time-scale invariant).
+        - ``no_autosave`` (default ``False``): wired in T30; the App stores the
+          flag today but does not act on it.
 
-    Class attributes:
+        Class attributes:
 
-- ``BINDINGS``: list of ``Binding`` — 10 F-row entries (T24) + 8 single-
-  key entries (T25) + 1 extra single-key entry (backtick → toggle_pause,
-  Wave 7) = 19 total, in order. Each entry's ``action`` resolves to an
-  ``action_<name>`` method on this App, which delegates to
-  ``action_handlers.<name>``.
-    - ``CSS_PATH``: relative path to ``app.tcss`` (the locked CSS).
+    - ``BINDINGS``: list of ``Binding`` — 10 F-row entries (T24) + 8 single-
+      key entries (T25) + 1 extra single-key entry (backtick → toggle_pause,
+      Wave 7) = 19 total, in order. Each entry's ``action`` resolves to an
+      ``action_<name>`` method on this App, which delegates to
+      ``action_handlers.<name>``.
+        - ``CSS_PATH``: relative path to ``app.tcss`` (the locked CSS).
     """
 
     # Locked CSS path (relative to this module). Textual loads it at startup.
@@ -366,9 +365,7 @@ class HtopTycoonApp(App[None]):
             return
         header.set_delegated(self._delegated)
 
-    def check_action(
-        self, action: str, parameters: tuple[object, ...]
-    ) -> bool:
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool:
         """Pre-action hook: disable delegation on any non-toggle action.
 
         Wave 8 (delegation): the design spec (docs/superpowers/specs/
@@ -415,9 +412,7 @@ class HtopTycoonApp(App[None]):
         from htop_tycoon.ui.widgets.org_tree import OrgTree
 
         for emp_table in self.query(EmployeeTable):
-            emp_table.refresh_from_state(
-                list(new_state.employees.values()), new_state.departments
-            )
+            emp_table.refresh_from_state(list(new_state.employees.values()), new_state.departments)
         for org_tree in self.query(OrgTree):
             org_tree.refresh_from_state(new_state)
 
@@ -469,9 +464,7 @@ class HtopTycoonApp(App[None]):
         state = self.engine.advance(state, 1)
         state = tick_products(state, rng)
         state, _comp_events = step_competitors(state, rng)
-        state, _fired, _scheduled = evaluate_events(
-            state, rng, balance, events_catalog, []
-        )
+        state, _fired, _scheduled = evaluate_events(state, rng, balance, events_catalog, [])
         state = process_revenue(state, balance)
         state = process_payroll(state, balance)
         # Snapshot + clear the pending sell flag so a single F10 press
@@ -515,9 +508,7 @@ class HtopTycoonApp(App[None]):
             new_state, _ = self._apply_ai_decision(new_state, decision)
 
         balance = load_balance()
-        new_state, focus_signals = apply_ai_suggested_focus(
-            new_state, balance, new_state.tick
-        )
+        new_state, focus_signals = apply_ai_suggested_focus(new_state, balance, new_state.tick)
         for sig in focus_signals:
             self.event_bus.publish(sig)
 
@@ -540,23 +531,19 @@ class HtopTycoonApp(App[None]):
         events through the bus after the AI block.
         """
         from htop_tycoon.engine import actions as engine_actions
-        from htop_tycoon.engine.events import AlertRaised, Event
+        from htop_tycoon.engine.events import AlertRaised
 
         action = decision.action
         target = decision.target
         events: list[Event] = []
 
         if action == "hire":
-            new_state, evs = engine_actions.hire(state, target, self._rng)
+            # Decision.target for hire is DepartmentId by contract.
+            new_state, evs = engine_actions.hire(state, target, self._rng)  # type: ignore[arg-type]
             return new_state, list(evs)
-        if action == "fire":
-            new_state, evs = engine_actions.fire(state, target)
-            return new_state, list(evs)
-        if action == "demote":
-            new_state, evs = engine_actions.demote(state, target)
-            return new_state, list(evs)
-        if action == "promote":
-            new_state, evs = engine_actions.promote(state, target)
+        if action in ("fire", "demote", "promote"):
+            # Decision.target for these is EmployeeId by contract.
+            new_state, evs = getattr(engine_actions, action)(state, target)
             return new_state, list(evs)
         if action in ("counter_cut", "marketing_blitz"):
             return state, [
@@ -590,9 +577,7 @@ class HtopTycoonApp(App[None]):
         try:
             persistence_save(self.state, self._save_path)
         except OSError:
-            _logger.exception(
-                "autosave failed: path=%s tick=%d", self._save_path, self.state.tick
-            )
+            _logger.exception("autosave failed: path=%s tick=%d", self._save_path, self.state.tick)
 
     def _load_autosave_every(self) -> int:
         """Return the autosave cadence from ``balance.yaml``.
@@ -648,6 +633,7 @@ class HtopTycoonApp(App[None]):
         """F1 — record the action then push the HelpScreen modal."""
         action_handlers.show_help(self)
         from htop_tycoon.ui.screens.help import HelpScreen as _HS
+
         self.push_screen(_HS())
 
     def action_show_setup(self) -> None:
@@ -661,6 +647,7 @@ class HtopTycoonApp(App[None]):
         """
         action_handlers.show_setup(self)
         from htop_tycoon.ui.screens.setup import SetupScreen as _SS
+
         self.push_screen(_SS(self))
 
     def action_search(self) -> None:
@@ -772,6 +759,7 @@ class HtopTycoonApp(App[None]):
         refreshes immediately.
         """
         from htop_tycoon.ui.action_handlers import toggle_delegate
+
         toggle_delegate(self)
 
     # Single-key (T25)
