@@ -240,8 +240,8 @@ class TestGameHeaderStateUpdated:
     async def test_header_renders_exact_locked_top_line(self) -> None:
         """The full top-line string must match the plan's locked example exactly.
 
-        Plan line 516:
-            ``tick: 42  |  2026년 1분기 12주차  |  Engineering·5명  |  SaaS``
+        Plan line 516 + Wave 7 (T39) regime slot:
+            ``tick: 42  |  2026년 1분기 12주차  |  경기:<label><trend>  |  Engineering·5명  |  SaaS``
         """
         from htop_tycoon.ui.widgets.header import GameHeader
 
@@ -254,9 +254,13 @@ class TestGameHeaderStateUpdated:
             bus.publish(StateUpdated(state=state))
             await pilot.pause()
             expected = (
-                "tick: 42  |  2026년 1분기 12주차  |  Engineering·5명  |  SaaS"
+                "tick: 42  |  2026년 1분기 12주차  |  경기:보통→  |  Engineering·5명  |  SaaS"
             )
-            assert str(header.renderable) == expected
+            rendered = str(header.renderable)
+            # Wave 7 (T39) added the regime slot between time and dept.
+            assert rendered == expected, (
+                f"locked top-line drift; expected {expected!r} got {rendered!r}"
+            )
 
     async def test_header_re_renders_on_subsequent_state_updates(self) -> None:
         """Given: header has rendered once with tick=42
