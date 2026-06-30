@@ -55,9 +55,16 @@ from htop_tycoon.engine.tick import TickEngine
 #   3. Re-run 2x more to confirm stability across runs.
 # ---------------------------------------------------------------------------
 
-EXPECTED_END_TICK: int | None = 13
+# Frozen literals — re-tuned for v0.2.0 (Waves 7-9: regime + dept_focus + cash_flow).
+# Lock-in protocol per plan T32/T46:
+#   - 3 consecutive runs of seed=42, max_ticks=10000 produced identical
+#     tick=54 and state_hash below.
+#   - cash flow regime modifiers + comp_ai baseline shifts push bankruptcy
+#     from the v0.1.0 tick-13 baseline to tick-54; the determinism
+#     contract holds (byte-identical output across runs).
+EXPECTED_END_TICK: int | None = 54
 EXPECTED_BANKRUPTCY_HASH: str | None = (
-    "71c22a2d345b05cb470387939d89b4090765e7778a4ae80e40fae5edf78a0a11"
+    "0abd86f0c96f085066709e50422fd5b28cbc8408ffcbe1a870254e5d4313d379"
 )
 
 # Spec ceiling (plan line 689): 10000 ticks max. Do NOT increase without

@@ -21,21 +21,73 @@ departments:
   unlock_costs: { Sales: 8_000, Operations: 12_000, Marketing: 18_000, Finance: 25_000 }
   max_employees_per_dept: 8
 
+  # Wave 8 (T40): per-department strategic focus. Each unlocked
+  # dept can be steered toward one of 4 options (BALANCED + 3 dept-specific).
+  # ``cooldown_weeks`` enforces an interlock: the player can't change
+  # a dept's focus more often than this many in-game weeks.
+  # Focus modifiers scale engine metrics: productivity, salary
+  # growth, satisfaction delta. BALANCED is the universal 1.0/0
+  # fallback (mod==1.0 for productivity / salary_growth, delta=0).
+  focus:
+    cooldown_weeks: 16
+    clamp_min: 0.5
+    clamp_max: 2.0  # SPEED * BOOM = 1.495 stays inside this band
+    per_type:
+      Engineering: { default: BALANCED, options: [BALANCED, QUALITY, SPEED, COST] }
+      Sales: { default: BALANCED, options: [BALANCED, AGGRESSIVE, CONSERVATIVE, RELATIONSHIP] }
+      Operations: { default: BALANCED, options: [BALANCED, EFFICIENCY, SAFETY, SCALE] }
+      Marketing: { default: BALANCED, options: [BALANCED, BRAND, PERFORMANCE, VIRAL] }
+      Finance: { default: BALANCED, options: [BALANCED, CONSERVATIVE_FIN, GROWTH, HEDGE] }
+    modifiers:
+      # Engineering
+      QUALITY:           { productivity: 0.95, satisfaction_delta: +2, salary_growth: 0.95 }
+      SPEED:             { productivity: 1.15, satisfaction_delta: -1, salary_growth: 1.05 }
+      COST:              { productivity: 0.90, satisfaction_delta: -2, salary_growth: 0.85 }
+      # Sales
+      AGGRESSIVE:        { productivity: 1.20, satisfaction_delta: -3, salary_growth: 1.10 }
+      CONSERVATIVE:      { productivity: 0.85, satisfaction_delta: +2, salary_growth: 0.95 }
+      RELATIONSHIP:      { productivity: 1.00, satisfaction_delta: +3, salary_growth: 1.00 }
+      # Operations
+      EFFICIENCY:        { productivity: 1.10, satisfaction_delta: -1, salary_growth: 0.95 }
+      SAFETY:            { productivity: 0.90, satisfaction_delta: +3, salary_growth: 1.00 }
+      SCALE:             { productivity: 1.20, satisfaction_delta: -2, salary_growth: 1.10 }
+      # Marketing
+      BRAND:             { productivity: 0.95, satisfaction_delta: +2, salary_growth: 1.00 }
+      PERFORMANCE:       { productivity: 1.15, satisfaction_delta: -1, salary_growth: 1.05 }
+      VIRAL:             { productivity: 1.25, satisfaction_delta: -3, salary_growth: 1.10 }
+      # Finance
+      CONSERVATIVE_FIN:  { productivity: 0.90, satisfaction_delta: +2, salary_growth: 0.90 }
+      GROWTH:            { productivity: 1.20, satisfaction_delta: -1, salary_growth: 1.15 }
+      HEDGE:             { productivity: 1.00, satisfaction_delta: +1, salary_growth: 0.95 }
+
 employees:
   starting_count: 5
   starting_skill_range: [2, 5]
   max_skill: 10
-  starting_salary_per_week: 1000   # tier-1 hire starting salary (int)
+  starting_salary_per_week: 300   # tier-1 hire starting salary (int)
   promotion_cost: 500
   demotion_savings: 300
   zombie_satisfaction_threshold: 20   # satisfaction below this flags zombie
+  # Wave 9: per-tick skill growth. The actual implementation in
+  # actions.grow_skills() uses a deterministic-modulo recipe (skill += 1
+  # iff (state.tick - hired_tick) % 10 == 0 AND satisfaction >= floor) so
+  # the float-valued growth_per_tick rounds to a stable integer schedule.
+  skill_growth_per_tick: 0.1
+  skill_growth_satisfaction_floor: 70
 
 products:
   starting: [SaaS]
   lifecycle_weeks: { intro: 8, growth: 26, maturity: 52, decline: 26 }
-  revenue_per_skill_point_per_week: 12
+  revenue_per_skill_point_per_week: 2000
   decline_share_loss_per_tick: 0.05   # T12: 5% share loss per tick in decline stage
   intro_share_gain_per_tick: 0.02     # T12: 2% share gain per tick in intro stage
+  # Wave 9: player attack costs (counter_price_cut + marketing_blitz) and
+  # the initial market_share granted to a brand-new product created via
+  # unlock_department. Fraction of share transferred per action matches
+  # MARKETING_SPREE_BOOST_FRACTION (= 0.01) from competitor_actions.py.
+  counter_price_cut_cost: 1000
+  marketing_blitz_cost: 2000
+  new_product_intro_share: 0.05
 
 competitors:
   starting: [Incumbents-Co, Disruptors-Inc, Foreign-LLC]
@@ -60,3 +112,80 @@ endings:
 save:
   autosave_every_n_ticks: 10
   max_backup_files: 3
+
+# Wave 8: AI auto-manager (위임) thresholds. Read by AutoManager.decide().
+# Pure rule-based: hire + demote + fire (zombie) applied per tick when
+# the matching precondition holds. promote is intentionally absent
+# (see ai_manager.py module docstring for rationale).
+ai_manager:
+  promote_skill_threshold: 4         # unused: AI never promotes (kept for docs/forward-compat)
+  promote_safety_multiplier: 1.0     # unused: AI never promotes
+  demote_satisfaction_threshold: 40  # satisfaction < this (and tier > 1) triggers demote
+  fire_satisfaction_threshold: 25    # satisfaction < this (any tier) triggers fire
+  cash_runway_weeks: 6               # cash < total_salary * this triggers demote (any tier>1)
+  hire_safety_weeks: 8               # hire only when cash >= (payroll+new_hire) * this
+
+# Wave 7 (T36): macroeconomic regime cycle.
+#
+# The game world cycles through BOOM / NORMAL / RECESSION / CRISIS via
+# weighted transitions sampled by ``regime_step()`` (T37). Each cycle
+# block contains both its ``transition`` weights (next regime
+# probabilities) and its ``modifiers`` (engine multipliers).
+#
+# Cycle lengths are uniform in ``[min_weeks, max_weeks]``; on the first
+# tick past ``max_weeks`` the next regime is sampled. ``cash_shock``
+# probability is rolled every tick of the active regime and triggers
+# a one-time ``CashShockEvent`` when True.
+#
+# Anti-pattern guard: do NOT bake these values into Python; read via
+# ``load_balance()`` and ``engine.regimes.load_regimes_from_balance``.
+regimes:
+  starting: NORMAL
+
+  cycles:
+    BOOM:
+      min_weeks: 40
+      max_weeks: 70
+      transition: { NORMAL: 0.70, RECESSION: 0.25, CRISIS: 0.05 }
+      modifiers:
+        revenue_multiplier: 1.30          # CPU / 매출 계산에 곱
+        salary_growth_multiplier: 1.05     # payroll inflation 가속
+        competitor_aggression_baseline: 0.30
+        event_probability_scale: 0.70
+        cash_shock_probability: 0.00       # 호황엔 cash shock 없음
+
+    NORMAL:
+      min_weeks: 50
+      max_weeks: 90
+      transition: { BOOM: 0.25, NORMAL: 0.30, RECESSION: 0.40, CRISIS: 0.05 }
+      modifiers:
+        revenue_multiplier: 1.00
+        salary_growth_multiplier: 1.00
+        competitor_aggression_baseline: 0.40
+        event_probability_scale: 1.00
+        cash_shock_probability: 0.00
+
+    RECESSION:
+      min_weeks: 25
+      max_weeks: 50
+      transition: { NORMAL: 0.65, RECESSION: 0.20, BOOM: 0.10, CRISIS: 0.05 }
+      modifiers:
+        revenue_multiplier: 0.85
+        salary_growth_multiplier: 0.95
+        competitor_aggression_baseline: 0.50
+        event_probability_scale: 1.40
+        cash_shock_probability: 0.01       # 미세하게 발생
+
+    CRISIS:
+      min_weeks: 6
+      max_weeks: 18
+      transition: { RECESSION: 0.75, NORMAL: 0.25 }
+      modifiers:
+        revenue_multiplier: 0.55
+        salary_growth_multiplier: 0.85
+        competitor_aggression_baseline: 0.70
+        event_probability_scale: 2.00
+        cash_shock_probability: 0.04       # 위기 틱의 4%에서 cash shock
+
+  # CRISIS regime에서 cash shock 발동 시 차감액 (음수로 engine에 반환)
+  crisis_cash_shock_amount: 3000

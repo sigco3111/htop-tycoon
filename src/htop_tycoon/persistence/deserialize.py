@@ -5,24 +5,33 @@ This module is the *read* half of the persistence layer. The *write* half
 
 Two public functions:
 
-- :func:`deserialize` — convert a v1 envelope (``{"version": 1, "state":
-  {...}, "saved_at_iso": "..."}``) back to a :class:`~htop_tycoon.domain.state.GameState`.
-  On ANY error (missing key, unknown version, bad field type, malformed
-  envelope), log a warning and return :func:`new_game` seeded with
-  :data:`CORRUPTION_RECOVERY_SEED`. NEVER raises.
-- :func:`load` — read JSON from ``path`` and delegate to :func:`deserialize`.
-  On ``json.JSONDecodeError`` from the primary file, tries ``path.with_suffix('.bak')``.
-  If the backup also fails to parse, returns the recovery state. On
-  ``FileNotFoundError``, returns the recovery state without consulting backup.
+- :func:`deserialize` -- convert a v1/v2 envelope (``{"version": 1 or 2,
+  "state": {...}, "saved_at_iso": "..."}``) back to a
+  :class:`~htop_tycoon.domain.state.GameState`. On ANY error (missing key,
+  unknown version, bad field type, malformed envelope), log a warning and
+  return :func:`new_game` seeded with :data:`CORRUPTION_RECOVERY_SEED`.
+  NEVER raises.
+- :func:`load` -- read JSON from ``path`` and delegate to :func:`deserialize`.
+  On ``json.JSONDecodeError`` from the primary file, tries
+  ``path.with_suffix('.bak')``. If the backup also fails to parse, returns
+  the recovery state. On ``FileNotFoundError``, returns the recovery state
+  without consulting backup.
 
-The recovery seed is the module-level constant :data:`CORRUPTION_RECOVERY_SEED`
-(locked at ``0``). It MUST NOT be derived from ``time.time()`` — that would
-break the determinism invariant: recovery must produce the same
-``state_hash`` across runs for the same schema version.
+Load-from-JSON materialization:
+
+After ``serialize`` -> JSON -> ``deserialize`` the nested ``departments`` /
+``employees`` / ``products`` / ``competitors`` fields are raw dicts (from
+``dataclasses.asdict``). The fix is ``_materialize_loaded_state``: walk each
+collection and convert shape-valid entries to their typed dataclass via
+``Domain(**...)``. Malformed entries are left as raw dicts (partial
+corruption degrades gracefully). UI consumers in v0.2.0 expect typed
+objects; without this materialize step, ``OrgTree``, ``EmployeeTable``,
+and ``DepartmentDetail`` crash on attribute access.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 from pathlib import Path
@@ -34,53 +43,207 @@ from htop_tycoon.domain.state import (
     GameTime,
     new_game,
 )
+from htop_tycoon.domain.regimes import default_regime_state
 from htop_tycoon.persistence.serialize import SCHEMA_VERSION
 
 __all__ = ["CORRUPTION_RECOVERY_SEED", "deserialize", "load"]
 
-# Recovery seed: a fixed constant, NEVER derived from ``time.time()``.
-#
-# Why a constant? The determinism invariant (see root AGENTS.md) requires
-# that ``state_hash(state)`` is fully determined by the state content. If we
-# seeded recovery from ``int(time.time())``, two CI runs that hit corruption
-# one second apart would produce different ``state_hash`` values, breaking
-# any test that pins a "post-corruption" hash.
-#
-# Locked at 0 for v0.1.0. Changing this is a wave-level decision and requires
-# updating ``.omo/plans/htop-tycoon.md``.
 CORRUPTION_RECOVERY_SEED: int = 0
 
 _logger = logging.getLogger(__name__)
 
 
 def _recovery_state() -> GameState:
-    """Return a fresh state seeded with :data:`CORRUPTION_RECOVERY_SEED`.
-
-    Centralized so every recovery path produces the exact same state and so
-    the determinism invariant has a single source of truth.
-    """
     return new_game(CORRUPTION_RECOVERY_SEED)
 
 
+def _materialize_loaded_state(state: GameState) -> GameState:
+    """Reconstruct typed domain objects from JSON-derived nested dicts.
+
+    Live in-memory states pass through unchanged. JSON-loaded states
+    have raw dicts in the four nested collections; this function walks
+    each and reconstructs ``Department``/``Employee``/``Product``/
+    ``Competitor`` instances via ``Domain(**...)`` so the v0.2.0 widgets
+    (which read ``emp.id``, ``dept.type.value``, etc.) work.
+
+    Forgiving: malformed entries (missing required fields, unknown
+    enum values) are left as raw dicts. Partial corruption degrades
+    gracefully; full corruption is the recovery path's responsibility
+    (not reached here because ``Company``/``GameTime`` already
+    reconstructed successfully above the materialize call).
+    """
+    from htop_tycoon.domain.dept import Department, DepartmentType
+    from htop_tycoon.domain.employee import Employee
+    from htop_tycoon.domain.market import Competitor
+    from htop_tycoon.domain.product import (
+        LifecycleStage,
+        Product,
+        ProductType,
+    )
+
+    def _safe_dept(d: Any) -> Any:
+        if not isinstance(d, dict):
+            return d
+        try:
+            type_obj = d.get("type")
+            if isinstance(type_obj, str):
+                try:
+                    type_obj = DepartmentType(type_obj)
+                except ValueError:
+                    return d
+            return Department(
+                id=d.get("id"),
+                type=type_obj,
+                head_employee_id=d.get("head_employee_id"),
+                employee_ids=list(d.get("employee_ids") or []),
+                founded_tick=int(d.get("founded_tick", 0)),
+                unlocked=bool(d.get("unlocked", False)),
+            )
+        except (KeyError, TypeError, ValueError):
+            return d
+
+    def _safe_emp(e: Any) -> Any:
+        if not isinstance(e, dict):
+            return e
+        try:
+            return Employee(
+                id=e.get("id"),
+                name=e.get("name"),
+                dept_id=e.get("dept_id"),
+                skill=int(e.get("skill", 1)),
+                tier=int(e.get("tier", 1)),
+                salary_per_week=int(e.get("salary_per_week", 0)),
+                satisfaction=int(e.get("satisfaction", 60)),
+                hired_tick=int(e.get("hired_tick", 0)),
+            )
+        except (KeyError, TypeError, ValueError):
+            return e
+
+    def _safe_product(p: Any) -> Any:
+        if not isinstance(p, dict):
+            return p
+        try:
+            type_obj = p.get("type")
+            if isinstance(type_obj, str):
+                try:
+                    type_obj = ProductType(type_obj)
+                except ValueError:
+                    return p
+            stage_obj = p.get("lifecycle")
+            if isinstance(stage_obj, str):
+                try:
+                    stage_obj = LifecycleStage(stage_obj)
+                except ValueError:
+                    return p
+            return Product(
+                id=p.get("id"),
+                type=type_obj,
+                lifecycle=stage_obj,
+                weeks_in_stage=int(p.get("weeks_in_stage", 0)),
+                market_share=float(p.get("market_share", 0.0)),
+                revenue_per_week=int(p.get("revenue_per_week", 0)),
+            )
+        except (KeyError, TypeError, ValueError):
+            return p
+
+    def _safe_competitor(c: Any) -> Any:
+        if not isinstance(c, dict):
+            return c
+        try:
+            name = c.get("name")
+            if not isinstance(name, str):
+                name = ""
+            cid = c.get("id")
+            if not isinstance(cid, str):
+                cid = "comp-default"
+            return Competitor(
+                id=cid,
+                name=name,
+                market_share=float(c.get("market_share", 0.0)),
+                aggression=float(c.get("aggression", 0.0)),
+                cash=int(c.get("cash", 0)),
+                alive=bool(c.get("alive", True)),
+            )
+        except (KeyError, TypeError, ValueError):
+            return c
+
+    def _safe_regime(r: Any) -> Any:
+        from htop_tycoon.domain.regimes import RegimeState, RegimeType
+        if not isinstance(r, dict):
+            return r
+        try:
+            current = r.get("current", "NORMAL")
+            if isinstance(current, str):
+                current = RegimeType(current)
+            return RegimeState(
+                current=current,
+                weeks_in_regime=int(r.get("weeks_in_regime", 0)),
+                started_tick=int(r.get("started_tick", 0)),
+            )
+        except (KeyError, TypeError, ValueError):
+            return r
+
+    raw_depts = state.departments
+    raw_emps = state.employees
+    raw_prods = state.products
+    raw_comps = state.competitors
+    raw_regime = state.regime
+
+    new_depts = (
+        {k: _safe_dept(v) for k, v in raw_depts.items()}
+        if isinstance(raw_depts, dict)
+        else raw_depts
+    )
+    new_emps = (
+        {k: _safe_emp(v) for k, v in raw_emps.items()}
+        if isinstance(raw_emps, dict)
+        else raw_emps
+    )
+    new_prods = (
+        {k: _safe_product(v) for k, v in raw_prods.items()}
+        if isinstance(raw_prods, dict)
+        else raw_prods
+    )
+    new_comps = (
+        {k: _safe_competitor(v) for k, v in raw_comps.items()}
+        if isinstance(raw_comps, dict)
+        else raw_comps
+    )
+    new_regime = _safe_regime(raw_regime) if raw_regime else raw_regime
+
+    if (
+        new_depts is raw_depts
+        and new_emps is raw_emps
+        and new_prods is raw_prods
+        and new_comps is raw_comps
+        and new_regime is raw_regime
+    ):
+        return state
+    return dataclasses.replace(
+        state,
+        departments=new_depts,
+        employees=new_emps,
+        products=new_prods,
+        competitors=new_comps,
+        regime=new_regime,
+    )
+
+
 def deserialize(data: dict[str, Any]) -> GameState:
-    """Convert a v1 envelope back to a :class:`GameState`, or return recovery state.
+    """Convert a v1/v2 envelope to a GameState, or return recovery state.
 
-    Contract:
+    Returns the recovery state (seed=0, new_game) on any error:
+    missing key, wrong type, unknown version, bad field type, malformed
+    envelope. Versions < ``SCHEMA_VERSION`` are auto-migrated via
+    :func:`upgrade_v1_to_v2`. Versions > ``SCHEMA_VERSION`` fall through
+    to recovery (future migration plan must add an upgrade_vN_to_v2 step).
 
-    - Reads ``data["version"]``; if missing, not an int, or not equal to
-      :data:`SCHEMA_VERSION`, logs a warning and returns the recovery state.
-    - Reads ``data["state"]`` and reconstructs ``Company``, ``GameTime``, and
-      ``GameState`` from it. ANY exception during reconstruction
-      (``KeyError``, ``TypeError``, ``ValueError``) is caught, logged, and
-      converted to the recovery state.
-    - On success, returns the reconstructed state (NOT the recovery state).
-
-    This function NEVER raises. It is the single chokepoint that turns
-    corrupt JSON into a playable game.
+    On success, runs the loaded state through
+    :func:`_materialize_loaded_state` so that ``Department`` /
+    ``Employee`` / ``Product`` / ``Competitor`` entries are typed
+    dataclass instances (not raw JSON-derived dicts).
     """
     try:
-        # 1. Schema version check. Missing key, wrong type, or wrong value
-        #    all funnel into recovery.
         version_raw = data["version"]  # KeyError -> recovery
         if not isinstance(version_raw, int) or isinstance(version_raw, bool):
             _logger.warning(
@@ -88,7 +251,15 @@ def deserialize(data: dict[str, Any]) -> GameState:
                 type(version_raw).__name__,
             )
             return _recovery_state()
-        if version_raw != SCHEMA_VERSION:
+        if version_raw < SCHEMA_VERSION:
+            from htop_tycoon.persistence.migration import upgrade_v1_to_v2
+
+            upgraded = upgrade_v1_to_v2(data)
+            _logger.info(
+                "deserialize: migrated save from v1 -> v2 (regime + dept_focus default)"
+            )
+            return deserialize(upgraded)
+        if version_raw > SCHEMA_VERSION:
             _logger.warning(
                 "deserialize: unknown schema version %r (expected %d); recovering",
                 version_raw,
@@ -96,7 +267,6 @@ def deserialize(data: dict[str, Any]) -> GameState:
             )
             return _recovery_state()
 
-        # 2. Reconstruct from data["state"]. Any failure here is corruption.
         state_dict = data["state"]  # KeyError -> recovery
         if not isinstance(state_dict, dict):
             _logger.warning(
@@ -108,7 +278,29 @@ def deserialize(data: dict[str, Any]) -> GameState:
         company = Company(**state_dict["company"])  # KeyError/TypeError/ValueError
         game_time = GameTime(**state_dict["game_time"])  # KeyError/ValueError
 
-        return GameState(
+        # v2 schema adds two new fields. They are present in fresh v2
+        # saves; for older v2 saves written before T45 the migration path
+        # filled them in via upgrade_v1_to_v2. Default the fields to
+        # their typed empty values when missing so GameState can be
+        # constructed typed.
+        from htop_tycoon.domain.regimes import RegimeState, RegimeType
+        regime_dict = state_dict.get("regime")
+        if not isinstance(regime_dict, dict) or not regime_dict:
+            regime_obj: RegimeState = default_regime_state()
+        else:
+            current = regime_dict.get("current", "NORMAL")
+            if isinstance(current, str):
+                current = RegimeType(current)
+            regime_obj = RegimeState(
+                current=current,
+                weeks_in_regime=int(regime_dict.get("weeks_in_regime", 0)),
+                started_tick=int(regime_dict.get("started_tick", 0)),
+            )
+        dept_focus_value: dict[Any, Any] = state_dict.get("dept_focus", {}) or {}
+        if not isinstance(dept_focus_value, dict):
+            dept_focus_value = {}
+
+        new_state = GameState(
             company=company,
             departments=state_dict["departments"],
             employees=state_dict["employees"],
@@ -120,12 +312,15 @@ def deserialize(data: dict[str, Any]) -> GameState:
             tick=state_dict["tick"],
             rng_seed=state_dict["rng_seed"],
             game_time=game_time,
-            version=state_dict["version"],
+            dept_focus=dept_focus_value,
+            regime=regime_obj,
+            version=state_dict.get("version", 1),
         )
+        # Materialize: convert JSON-derived dicts in departments/employees
+        # /products/competitors back to typed dataclass instances so
+        # v0.2.0 UI consumers (which read attributes) don't crash.
+        return _materialize_loaded_state(new_state)
     except (KeyError, TypeError, ValueError) as exc:
-        # Catch the precise exception family raised by dict-key / type /
-        # validator failures. Other exceptions (e.g. RecursionError) are
-        # NOT caught — those are bugs in our code, not corruption.
         _logger.warning(
             "deserialize: corruption detected (%s: %s); recovering with seed=%d",
             type(exc).__name__,
@@ -136,26 +331,7 @@ def deserialize(data: dict[str, Any]) -> GameState:
 
 
 def load(path: Path) -> GameState:
-    """Load a :class:`GameState` from ``path``, with backup fallback and recovery.
-
-    Order of operations:
-
-    1. Try to read and parse JSON from ``path``.
-       - ``FileNotFoundError`` -> return recovery state immediately (no
-         backup try; if the primary is missing, the user is on a fresh
-         install or has deleted their save, and we should NOT silently
-         resurrect a stale backup from a prior run).
-       - ``json.JSONDecodeError`` -> try ``path.with_suffix('.bak')``.
-         - Backup parses -> :func:`deserialize` it (corrupt-but-valid-JSON
-           backup still funnels through recovery inside ``deserialize``).
-         - Backup also raises ``json.JSONDecodeError`` or ``FileNotFoundError``
-           -> return recovery state.
-       - Other ``OSError`` (permission denied, etc.) -> log and recover.
-    2. On a successfully-parsed payload, hand it to :func:`deserialize`.
-       Corrupt-but-valid-JSON is :func:`deserialize`'s problem, not ours.
-
-    NEVER raises. Always returns a :class:`GameState`.
-    """
+    """Load a :class:`GameState` from ``path``, with backup fallback and recovery."""
     try:
         text = path.read_text(encoding="utf-8")
         try:
@@ -188,13 +364,6 @@ def load(path: Path) -> GameState:
 
 
 def _load_from_backup(path: Path, primary_error: json.JSONDecodeError) -> GameState:
-    """Try the backup file after primary JSON parse failed.
-
-    Helper for :func:`load`. If the backup also fails to parse, or doesn't
-    exist, returns the recovery state. If it parses, hands it to
-    :func:`deserialize` so corrupt-but-valid-JSON still funnels through
-    the same recovery path as in-memory corruption.
-    """
     backup_path = path.with_suffix(".bak")
     try:
         backup_text = backup_path.read_text(encoding="utf-8")

@@ -19,6 +19,11 @@ REQUIRED_TOP_LEVEL_KEYS: frozenset[str] = frozenset(
         "events",
         "endings",
         "save",
+        # Wave 7 (T36): market regimes (BOOM / NORMAL / RECESSION / CRISIS)
+        # with per-regime cycle + transition weights + modifiers and the
+        # ``crisis_cash_shock_amount``. Required so ``load_balance()`` fails
+        # loudly at startup if the YAML drifts.
+        "regimes",
     }
 )
 

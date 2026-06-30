@@ -29,6 +29,31 @@ from htop_tycoon.engine.rng import GameRNG
 __all__ = ["demote", "fire", "hire", "promote"]
 
 
+def _effective_skill_hi(
+    state: GameState, dept_id: DepartmentId, skill_lo: int, skill_hi: int
+) -> int:
+    """Return the effective upper bound for hire skill given dept focus.
+
+    Currently the bias narrows the band only for ``cost-like`` foci
+    (COST, HEDGE, CONSERVATIVE_FIN). For these, the upper bound becomes
+    ``skill_lo + (skill_hi - skill_lo) // 2`` — exactly the lower half
+    of the original range. BALANCED and all other foci return
+    ``skill_hi`` unchanged.
+    """
+    from htop_tycoon.domain.focus import FocusType
+
+    focus_choice = state.dept_focus.get(dept_id)
+    if focus_choice is None:
+        return skill_hi
+    if focus_choice.focus not in (
+        FocusType.COST,
+        FocusType.HEDGE,
+        FocusType.CONSERVATIVE_FIN,
+    ):
+        return skill_hi
+    return skill_lo + (skill_hi - skill_lo) // 2
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -86,14 +111,24 @@ def hire(
     balance = load_balance()
 
     skill_lo, skill_hi = balance["employees"]["starting_skill_range"]
+    skill_lo_i = int(skill_lo)
+    skill_hi_i = int(skill_hi)
     starting_salary = int(balance["employees"]["starting_salary_per_week"])
+
+    # Wave 8 (T42): when the dept's focus is one of the "cost" variants
+    # (COST, HEDGE, CONSERVATIVE_FIN), bias the upper bound of
+    # starting_skill_range down toward the lower bound. The end result
+    # is a narrower skill band centred on the lower end — cheaper hires
+    # are easier to land but at lower starting skill. BALANCED (and
+    # all other foci) uses the full range.
+    skill_hi_eff = _effective_skill_hi(state, dept_id, skill_lo_i, skill_hi_i)
 
     new_id = _new_employee_id(rng)
     new_employee = Employee(
         id=new_id,
         name=generate_korean_name(rng),
         dept_id=dept_id,
-        skill=rng.int(int(skill_lo), int(skill_hi)),
+        skill=rng.int(skill_lo_i, skill_hi_eff),
         tier=1,
         salary_per_week=starting_salary,
         satisfaction=60,
@@ -104,9 +139,7 @@ def hire(
     new_dept = dataclasses.replace(
         dept,
         employee_ids=[*dept.employee_ids, new_id],
-        head_employee_id=(
-            new_id if dept.head_employee_id is None else dept.head_employee_id
-        ),
+        head_employee_id=(new_id if dept.head_employee_id is None else dept.head_employee_id),
     )
     new_state = dataclasses.replace(
         state,
@@ -151,23 +184,15 @@ def fire(
     new_dept = dataclasses.replace(
         dept,
         employee_ids=[eid for eid in dept.employee_ids if eid != employee_id],
-        head_employee_id=(
-            None
-            if dept.head_employee_id == employee_id
-            else dept.head_employee_id
-        ),
+        head_employee_id=(None if dept.head_employee_id == employee_id else dept.head_employee_id),
     )
     new_state = dataclasses.replace(
         state,
         company=new_company,
         departments={**state.departments, employee.dept_id: new_dept},
-        employees={
-            eid: emp for eid, emp in state.employees.items() if eid != employee_id
-        },
+        employees={eid: emp for eid, emp in state.employees.items() if eid != employee_id},
     )
-    return new_state, [
-        EmployeeFired(employee_id=employee_id, severance_paid=severance_paid)
-    ]
+    return new_state, [EmployeeFired(employee_id=employee_id, severance_paid=severance_paid)]
 
 
 def promote(
@@ -193,9 +218,7 @@ def promote(
     cost = int(balance["employees"]["promotion_cost"])
 
     if state.company.cash < cost:
-        return state, [
-            AlertRaised(message_ko="예산 부족 — 승진 불가", severity="warn")
-        ]
+        return state, [AlertRaised(message_ko="예산 부족 — 승진 불가", severity="warn")]
 
     employee = _require_employee(state, employee_id)
     new_employee = employee.promote()  # raises if at TIER_MAX
@@ -235,9 +258,7 @@ def demote(
     employee = _require_employee(state, employee_id)
 
     if employee.tier <= 1:
-        return state, [
-            EmployeeDemoted(employee_id=employee_id, savings_gained=0)
-        ]
+        return state, [EmployeeDemoted(employee_id=employee_id, savings_gained=0)]
 
     new_employee = employee.demote()
     new_company = dataclasses.replace(
@@ -249,6 +270,4 @@ def demote(
         company=new_company,
         employees={**state.employees, employee_id: new_employee},
     )
-    return new_state, [
-        EmployeeDemoted(employee_id=employee_id, savings_gained=savings)
-    ]
+    return new_state, [EmployeeDemoted(employee_id=employee_id, savings_gained=savings)]

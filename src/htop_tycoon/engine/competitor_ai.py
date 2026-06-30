@@ -59,6 +59,7 @@ from htop_tycoon.engine.competitor_actions import (
     _apply_talent_poach,
 )
 from htop_tycoon.engine.events import CompetitorAction, Event
+from htop_tycoon.engine.regimes import load_regimes_from_balance
 from htop_tycoon.engine.rng import GameRNG
 
 __all__ = [
@@ -98,9 +99,7 @@ _ACTION_WEIGHTS: tuple[tuple[str, float], ...] = (
 # ---------------------------------------------------------------------------
 
 
-def step_competitors(
-    state: GameState, rng: GameRNG
-) -> tuple[GameState, list[Event]]:
+def step_competitors(state: GameState, rng: GameRNG) -> tuple[GameState, list[Event]]:
     """Run one tick of competitor AI for every alive competitor in ``state``.
 
     For each alive competitor, in dict-iteration order:
@@ -146,7 +145,14 @@ def step_competitors(
         if not competitor.alive:
             # Dead competitors do not act.
             continue
-        if not (rng.float() < competitor.aggression):
+        # T38: aggression threshold is the regime baseline (per
+        # balance.yaml regimes.<TYPE>.modifiers.competitor_aggression_baseline)
+        # plus the per-competitor aggression. ``baseline`` shifts the
+        # baseline macro environment in/out of CRISIS (0.7) without
+        # mutating the stored competitor.aggression field.
+        cycles = load_regimes_from_balance(load_balance())
+        baseline_aggression = cycles[state.regime.current].modifiers.competitor_aggression_baseline
+        if not (rng.float() < (baseline_aggression + competitor.aggression)):
             # This tick: no action.
             continue
 
@@ -177,9 +183,7 @@ def step_competitors(
                 # Unreachable: action_type is always one of the three
                 # locked strings (selected by weighted_choice from
                 # _ACTION_WEIGHTS).
-                raise AssertionError(
-                    f"unreachable action_type: {action_type!r}"
-                )
+                raise AssertionError(f"unreachable action_type: {action_type!r}")
 
         events.append(
             CompetitorAction(
@@ -229,8 +233,7 @@ def _read_poach_min_skill(balance: dict[str, Any]) -> int:
     value = balance["competitors"]["poach_min_skill"]
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(
-            f"poach_min_skill must be a strict int, "
-            f"got {type(value).__name__}: {value!r}"
+            f"poach_min_skill must be a strict int, got {type(value).__name__}: {value!r}"
         )
     return value
 
@@ -240,4 +243,3 @@ def _choose_action(rng: GameRNG) -> str:
     names = [name for name, _ in _ACTION_WEIGHTS]
     weights = [weight for _, weight in _ACTION_WEIGHTS]
     return rng.weighted_choice(names, weights)
-

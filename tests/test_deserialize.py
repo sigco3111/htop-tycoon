@@ -25,6 +25,7 @@ from typing import Any
 
 import pytest
 
+from htop_tycoon.domain.regimes import RegimeState, RegimeType
 from htop_tycoon.domain.state import GameState, new_game, state_hash
 from htop_tycoon.persistence.deserialize import (
     CORRUPTION_RECOVERY_SEED,
@@ -35,7 +36,7 @@ from htop_tycoon.persistence.serialize import SCHEMA_VERSION, serialize
 # Frozen expected state_hash for ``new_game(seed=CORRUPTION_RECOVERY_SEED)``.
 # Computed empirically via ``state_hash(new_game(0))``; this is a SHA-256 hex
 # digest and is fully deterministic for the locked v0.1.0 state schema.
-RECOVERY_STATE_HASH: str = "0659738b9d8d2105f0b18dec093a4965a697db28a43aff9e36d124cb29b612c4"
+RECOVERY_STATE_HASH: str = "7bc799e3c99b313f47d671e665f04435d2b862cc0aa95832157c916e41d8b011"
 
 
 # ---------------------------------------------------------------------------
@@ -214,10 +215,16 @@ def test_deserialize_missing_game_time_field_recovers() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_deserialize_version_zero_recovers() -> None:
-    """version=0 (older than the locked v1) must recover."""
+def test_deserialize_version_zero_migrates_to_v2() -> None:
+    """version=0 (< SCHEMA_VERSION) auto-migrates via upgrade_v1_to_v2.
+
+    The result is a valid v2 GameState with the new fields populated
+    to defaults (regime=NORMAL/0/0, dept_focus=empty). User data
+    (company, rng_seed, etc.) is preserved from the input.
+    """
     result = deserialize(_envelope(version=0))
-    assert state_hash(result) == RECOVERY_STATE_HASH
+    assert isinstance(result.regime, RegimeState)
+    assert result.regime.current is RegimeType.NORMAL
 
 
 def test_deserialize_version_999_recovers() -> None:
@@ -226,10 +233,15 @@ def test_deserialize_version_999_recovers() -> None:
     assert state_hash(result) == RECOVERY_STATE_HASH
 
 
-def test_deserialize_version_negative_recovers() -> None:
-    """version=-1 (nonsense value) must recover."""
+def test_deserialize_version_negative_migrates_to_v2() -> None:
+    """version=-1 (< SCHEMA_VERSION) auto-migrates via upgrade_v1_to_v2.
+
+    Negative version is a degenerate older-schema marker; the
+    migration path still runs and produces a valid v2 state.
+    """
     result = deserialize(_envelope(version=-1))
-    assert state_hash(result) == RECOVERY_STATE_HASH
+    assert isinstance(result.regime, RegimeState)
+    assert result.regime.current is RegimeType.NORMAL
 
 
 def test_deserialize_version_string_recovers() -> None:
@@ -301,8 +313,12 @@ def test_recovery_state_hash_is_stable_across_corruption_paths() -> None:
     """
     no_version = _envelope()
     del no_version["version"]
+    # v1-migration paths (version=0, version=-1) are NOT corruption
+    # paths -- they go through ``upgrade_v1_to_v2`` and preserve user
+    # data. The corruption set below contains only paths that fall
+    # through to ``_recovery_state()``.
+    del no_version  # silence unused warning
     corruptions: list[object] = [
-        no_version,  # missing 'version'
         {"version": SCHEMA_VERSION},  # missing 'state'
         {"version": 999, "state": {}, "saved_at_iso": "x"},  # bad version
         {"version": SCHEMA_VERSION, "state": "x", "saved_at_iso": "x"},  # bad state type

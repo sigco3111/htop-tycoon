@@ -13,6 +13,8 @@ import json
 from typing import Any, Literal, NewType
 
 from htop_tycoon.data import load_balance
+from htop_tycoon.domain.focus import default_dept_focus
+from htop_tycoon.domain.regimes import RegimeState, default_regime_state
 
 __all__ = [
     "Company",
@@ -23,7 +25,10 @@ __all__ = [
     "GameState",
     "GameTime",
     "ProductId",
+    "RegimeState",
     "StoryNodeId",
+    "default_dept_focus",
+    "default_regime_state",
     "new_game",
     "state_hash",
 ]
@@ -55,7 +60,7 @@ def _validate_company_market_cap(value: object) -> int:
     validated = _require_strict_int("market_cap", value)
     if validated < 0:
         raise ValueError(f"market_cap must be non-negative, got {validated!r}")
-    return validated
+    return value
 
 
 def _validate_company_cash(value: object) -> int:
@@ -144,6 +149,8 @@ class GameState:
     game_time: GameTime = dataclasses.field(
         default_factory=lambda: GameTime(year=1, quarter=1, week=1)
     )
+    regime: RegimeState = dataclasses.field(default_factory=default_regime_state)
+    dept_focus: dict[Any, Any] = dataclasses.field(default_factory=default_dept_focus)
     version: Literal[1] = 1
 
 
@@ -175,6 +182,7 @@ def new_game(rng_seed: int) -> GameState:
         tick=0,
         rng_seed=rng_seed,
         game_time=GameTime(year=1, quarter=1, week=1),
+        regime=default_regime_state(),
         version=1,
     )
 
