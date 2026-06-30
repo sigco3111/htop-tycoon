@@ -28,15 +28,42 @@ Anti-patterns avoided:
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from textual.binding import Binding, BindingType
 from textual.widgets import Tree
 from textual.widgets.tree import TreeNode
 
-from htop_tycoon.domain.dept import Department
+from htop_tycoon.domain.dept import Department, DepartmentType
 from htop_tycoon.domain.employee import Employee
 from htop_tycoon.domain.state import EmployeeId, GameState
+
+
+def _read_dept_shape(
+    dept_obj: object,
+) -> tuple[str | None, list[Any]]:
+    """Return ``(type_name_str, employee_ids_list)`` from a dept object.
+
+    Accepts:
+      * A ``Department`` dataclass instance (live in-memory path).
+      * A ``dict`` shaped like the dataclass (load-from-JSON path).
+
+    Returns ``(None, [])`` when the shape is unrecognised.
+    """
+    if isinstance(dept_obj, Department):
+        return (dept_obj.type.value, list(dept_obj.employee_ids))
+    if isinstance(dept_obj, dict):
+        raw_type = dept_obj.get("type")
+        if isinstance(raw_type, DepartmentType):
+            type_name: str | None = raw_type.value
+        elif isinstance(raw_type, str):
+            type_name = raw_type
+        else:
+            type_name = None
+        emp_ids = dept_obj.get("employee_ids", []) or []
+        return (type_name, list(emp_ids))
+    return (None, [])
+
 
 __all__ = ["OrgTree"]
 
@@ -127,18 +154,26 @@ class OrgTree(Tree[_TreeData]):
         """
         # Defensive: if the state has no departments, the tree renders just
         # the root (matches the QA failure path).
-        for dept_id, dept_obj in self._state.departments.items():
-            # Type narrowing: state.departments is dict[DepartmentId, Any]
-            # to avoid the circular import on Department; we narrow here.
-            assert isinstance(dept_obj, Department), (
-                f"state.departments[{dept_id!r}] must be Department, "
-                f"got {type(dept_obj).__name__}"
-            )
-            dept_label = f"{dept_obj.type.value} ({len(dept_obj.employee_ids)})"
+        # Defensive read: ``state.departments`` is typed ``dict[K, Any]`` to
+        # avoid a circular import on Department. In v0.2.0 the load path
+        # returns raw nested dicts (``dataclasses.asdict`` was used during
+        # serialize), so the value may be ``dict`` rather than a typed
+        # ``Department``. Accept BOTH representations. Post-load
+        # conversions live in app.py via ``_materialize_state`` for live
+        # sessions; for saved-then-loaded states this widget is read-only
+        # so dict-shape access is sufficient.
+        for _dept_id, dept_obj in self._state.departments.items():
+            dept_type_value, employee_ids = _read_dept_shape(dept_obj)
+            if dept_type_value is None:
+                # Truly unknown shape — skip rather than crash.
+                continue
+            dept_label = f"{dept_type_value} ({len(employee_ids)})"
             dept_node: TreeNode[_TreeData] = self.root.add(
-                dept_label, data=dept_obj, expand=False
+                dept_label,
+                data=dept_obj,
+                expand=False,
             )
-            for emp_id in dept_obj.employee_ids:
+            for emp_id in employee_ids:
                 emp = self._state.employees.get(emp_id)
                 # Skip a missing employee rather than crashing — engine
                 # invariants keep these aligned, but the widget stays
