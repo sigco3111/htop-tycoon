@@ -193,7 +193,7 @@ class FocusPickerScreen(ModalScreen):  # type: ignore[misc,valid-type,type-arg]
     """
 
     BINDINGS = [
-        Binding("escape", "dismiss_screen", "Esc: 닫기", show=False),
+        Binding("escape", "dismiss", "Esc: 닫기", show=False),
         Binding("up", "cursor_up", "위로", show=False),
         Binding("down", "cursor_down", "아래로", show=False),
         Binding("right", "cycle_focus_next", "→: 다음 focus", show=False),
