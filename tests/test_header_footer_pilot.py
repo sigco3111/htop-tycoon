@@ -13,7 +13,7 @@ Locks the contract from ``.omo/plans/htop-tycoon.md`` line 515-524:
 
   and the single-key row is::
 
-      t:트리 u:부서필터 m:만족도 s:급여 i:입사 ↑↓:이동 Space:태그
+      t:트리 u:부서필터 m:만족도 s:급여 i:전략 ↑↓:이동 Space:태그
 
 - The footer MUST NOT use htop's original English F-key labels (F7Nice-,
   F8Nice+, F9Kill, F10Quit) — those describe real htop behavior, not this
@@ -60,7 +60,7 @@ LOCKED_F_ROW: str = (
 # shortcut moved from ``T:입사`` to ``i:입사`` (mnemonic for "i/psa" =
 # hired; ``t`` was already taken by ``toggle_tree``).
 LOCKED_SINGLE_KEY_ROW: str = (
-    "t:트리 u:부서필터 m:만족도 s:급여 i:입사 ↑↓:이동 Space:태그 p:일시정지 d:위임"
+    "t:트리 u:부서필터 m:만족도 s:급여 i:전략 ↑↓:이동 Space:태그 p:일시정지 d:위임"
 )
 
 # Forbidden: htop's original English labels do NOT describe our game actions.
@@ -465,7 +465,7 @@ class TestHtopFooterSingleKeyRow:
             "u:부서필터",
             "m:만족도",
             "s:급여",
-            "i:입사",
+            "i:전략",
             "↑↓:이동",
             "Space:태그",
             "p:일시정지",

@@ -91,9 +91,7 @@ REGIME_CSS_CLASSES: dict[RegimeType, str] = {
 # pause prefix is the empty string when running and "⏸ 일시정지 | " when
 # paused (Wave 7 — the header is the second user-visible cue alongside
 # the #pause-button label).
-_HEADER_FORMAT: str = (
-    "{pause_prefix}tick: {tick}  |  {time_str}  |  {regime_str}  |  {delegate_prefix}{dept_str}  |  {prod_str}"
-)
+_HEADER_FORMAT: str = "{pause_prefix}tick: {tick}  |  {time_str}  |  {regime_str}  |  {delegate_prefix}{dept_str}  |  {prod_str}"
 
 _PAUSE_PREFIX: str = "⏸ 일시정지  |  "
 _DELEGATE_PREFIX: str = "위임  |  "

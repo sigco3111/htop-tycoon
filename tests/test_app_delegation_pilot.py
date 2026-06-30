@@ -212,9 +212,7 @@ class TestDelegationKeypress:
             # Work-around path: check_action returns True AND keeps
             # _delegated intact when the action is whitelisted.
             assert app.check_action("toggle_pause", ()) is True
-            assert app._delegated is True, (
-                "toggle_pause must not auto-disable delegation"
-            )
+            assert app._delegated is True, "toggle_pause must not auto-disable delegation"
             # Inverse contract: a non-whitelist action DOES disable.
             app.check_action("fire_selected", ())
             assert app._delegated is False
@@ -271,12 +269,8 @@ class TestDelegationKeypress:
             assert len(app.screen_stack) == 1
             await pilot.press("d")
             await pilot.pause()
-            assert len(app.screen_stack) == 1, (
-                "d must not push a modal screen"
-            )
-            assert app._delegated is True, (
-                "d MUST flip _delegated — the action still happened"
-            )
+            assert len(app.screen_stack) == 1, "d must not push a modal screen"
+            assert app._delegated is True, "d MUST flip _delegated — the action still happened"
 
 
 # ============================================================================
@@ -298,9 +292,7 @@ class TestDelegationTickDispatch:
         async with app.run_test() as pilot:
             await pilot.pause()
             app._delegated = True
-            with patch.object(
-                app._auto_manager, "decide", return_value=[]
-            ) as mock_decide:
+            with patch.object(app._auto_manager, "decide", return_value=[]) as mock_decide:
                 app._tick_once()
                 await pilot.pause()
                 assert mock_decide.called, (
@@ -320,9 +312,7 @@ class TestDelegationTickDispatch:
         async with app.run_test() as pilot:
             await pilot.pause()
             assert app._delegated is False
-            with patch.object(
-                app._auto_manager, "decide", return_value=[]
-            ) as mock_decide:
+            with patch.object(app._auto_manager, "decide", return_value=[]) as mock_decide:
                 app._tick_once()
                 await pilot.pause()
                 assert not mock_decide.called, (
@@ -406,7 +396,5 @@ def test_counter_cut_decision_is_noop_with_alert() -> None:
     new_state, events = app._apply_ai_decision(state, decision)
     assert new_state is state, "counter_cut must be a no-op on state"
     alert_events = [e for e in events if isinstance(e, AlertRaised)]
-    assert len(alert_events) == 1, (
-        f"expected exactly one AlertRaised, got {len(alert_events)}"
-    )
+    assert len(alert_events) == 1, f"expected exactly one AlertRaised, got {len(alert_events)}"
     assert alert_events[0].message_ko, "AlertRaised message must be non-empty"
