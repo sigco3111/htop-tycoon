@@ -21,6 +21,43 @@ departments:
   unlock_costs: { Sales: 8_000, Operations: 12_000, Marketing: 18_000, Finance: 25_000 }
   max_employees_per_dept: 8
 
+  # Wave 8 (T40): per-department strategic focus. Each unlocked
+  # dept can be steered toward one of 4 options (BALANCED + 3 dept-specific).
+  # ``cooldown_weeks`` enforces an interlock: the player can't change
+  # a dept's focus more often than this many in-game weeks.
+  # Focus modifiers scale engine metrics: productivity, salary
+  # growth, satisfaction delta. BALANCED is the universal 1.0/0
+  # fallback (mod==1.0 for productivity / salary_growth, delta=0).
+  focus:
+    cooldown_weeks: 16
+    per_type:
+      Engineering: { default: BALANCED, options: [BALANCED, QUALITY, SPEED, COST] }
+      Sales: { default: BALANCED, options: [BALANCED, AGGRESSIVE, CONSERVATIVE, RELATIONSHIP] }
+      Operations: { default: BALANCED, options: [BALANCED, EFFICIENCY, SAFETY, SCALE] }
+      Marketing: { default: BALANCED, options: [BALANCED, BRAND, PERFORMANCE, VIRAL] }
+      Finance: { default: BALANCED, options: [BALANCED, CONSERVATIVE_FIN, GROWTH, HEDGE] }
+    modifiers:
+      # Engineering
+      QUALITY:           { productivity: 0.95, satisfaction_delta: +2, salary_growth: 0.95 }
+      SPEED:             { productivity: 1.15, satisfaction_delta: -1, salary_growth: 1.05 }
+      COST:              { productivity: 0.90, satisfaction_delta: -2, salary_growth: 0.85 }
+      # Sales
+      AGGRESSIVE:        { productivity: 1.20, satisfaction_delta: -3, salary_growth: 1.10 }
+      CONSERVATIVE:      { productivity: 0.85, satisfaction_delta: +2, salary_growth: 0.95 }
+      RELATIONSHIP:      { productivity: 1.00, satisfaction_delta: +3, salary_growth: 1.00 }
+      # Operations
+      EFFICIENCY:        { productivity: 1.10, satisfaction_delta: -1, salary_growth: 0.95 }
+      SAFETY:            { productivity: 0.90, satisfaction_delta: +3, salary_growth: 1.00 }
+      SCALE:             { productivity: 1.20, satisfaction_delta: -2, salary_growth: 1.10 }
+      # Marketing
+      BRAND:             { productivity: 0.95, satisfaction_delta: +2, salary_growth: 1.00 }
+      PERFORMANCE:       { productivity: 1.15, satisfaction_delta: -1, salary_growth: 1.05 }
+      VIRAL:             { productivity: 1.25, satisfaction_delta: -3, salary_growth: 1.10 }
+      # Finance
+      CONSERVATIVE_FIN:  { productivity: 0.90, satisfaction_delta: +2, salary_growth: 0.90 }
+      GROWTH:            { productivity: 1.20, satisfaction_delta: -1, salary_growth: 1.15 }
+      HEDGE:             { productivity: 1.00, satisfaction_delta: +1, salary_growth: 0.95 }
+
 employees:
   starting_count: 5
   starting_skill_range: [2, 5]

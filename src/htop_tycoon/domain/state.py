@@ -13,6 +13,7 @@ import json
 from typing import Any, Literal, NewType
 
 from htop_tycoon.data import load_balance
+from htop_tycoon.domain.focus import default_dept_focus
 from htop_tycoon.domain.regimes import RegimeState, default_regime_state
 
 __all__ = [
@@ -26,6 +27,7 @@ __all__ = [
     "ProductId",
     "RegimeState",
     "StoryNodeId",
+    "default_dept_focus",
     "default_regime_state",
     "new_game",
     "state_hash",
@@ -148,6 +150,7 @@ class GameState:
         default_factory=lambda: GameTime(year=1, quarter=1, week=1)
     )
     regime: RegimeState = dataclasses.field(default_factory=default_regime_state)
+    dept_focus: dict[Any, Any] = dataclasses.field(default_factory=default_dept_focus)
     version: Literal[1] = 1
 
 
