@@ -167,17 +167,18 @@ class TestRegistrySingleKeyBindingsExact:
 class TestAppBindingsAttribute:
     """``HtopTycoonApp.BINDINGS`` contains both F-row and single-key bindings."""
 
-    def test_app_bindings_has_nineteen_entries(self) -> None:
-        """``BINDINGS`` has 19 entries (10 F + 8 single-key + 1 extra).
+    def test_app_bindings_has_twenty_entries(self) -> None:
+        """``BINDINGS`` has 20 entries (10 F + 8 single-key + 2 extras).
 
         Wave 7 added one extra single-key entry (uppercase ``P`` →
-        toggle_pause) registered via ``register_extra_bindings()``.
-        The locked F1..F10 row stays at 10 and the locked single-key
-        row stays at 8. The time-stop feature is reachable both via
-        the ``#pause-button`` widget in the header and via the
-        ``P`` keypress.
+        toggle_pause) registered via ``register_extra_bindings()``;
+        Wave 8 added a second extra entry (``d`` → toggle_delegate)
+        for the delegation feature. The locked F1..F10 row stays at
+        10 and the locked single-key row stays at 8. The time-stop
+        feature is reachable both via the ``#pause-button`` widget
+        in the header and via the ``P`` keypress.
         """
-        assert len(HtopTycoonApp.BINDINGS) == 19
+        assert len(HtopTycoonApp.BINDINGS) == 20
 
     def test_app_bindings_first_ten_match_f_bindings(self) -> None:
         """The first 10 entries match the T24 ``register_f_bindings()`` output."""
@@ -188,18 +189,21 @@ class TestAppBindingsAttribute:
         """The middle 8 entries (10..18) match ``register_single_key_bindings()``.
 
         Renamed from ``last_eight_match_single_key_bindings`` when
-        Wave 7 added the 19th entry (uppercase ``P``). The single-key
-        block stays at indices 10..17 (length 8); the extra binding
-        lives at index 18.
+        Wave 7 added the 19th entry (uppercase ``P``). Wave 8 then
+        added the 20th entry (``d``). The single-key block stays at
+        indices 10..17 (length 8); the extras live at indices
+        18..19.
         """
         registry_sk = register_single_key_bindings()
         assert HtopTycoonApp.BINDINGS[10:18] == registry_sk
 
-    def test_app_bindings_last_entry_is_extra_pause(self) -> None:
-        """The 19th entry is the Wave-7 ``P → toggle_pause`` binding.
+    def test_app_bindings_last_entries_are_extras(self) -> None:
+        """The last 2 entries are the Wave-7/8 extra bindings.
 
-        Asserts the exact ``Binding`` object so a future refactor that
-        silently drops the extra binding (or reorders it) fails loudly.
+        Asserts the exact ``Binding`` slice (so a future refactor
+        that silently drops or reorders the extras fails loudly) and
+        pins the individual keys/actions at indices 18 (pause) and
+        19 (delegate).
         """
         from htop_tycoon.bindings.registry import register_extra_bindings
 
@@ -207,6 +211,8 @@ class TestAppBindingsAttribute:
         assert HtopTycoonApp.BINDINGS[18:] == registry_extra
         assert HtopTycoonApp.BINDINGS[18].key == "p"
         assert HtopTycoonApp.BINDINGS[18].action == "toggle_pause"
+        assert HtopTycoonApp.BINDINGS[19].key == "d"
+        assert HtopTycoonApp.BINDINGS[19].action == "toggle_delegate"
 
 
 # -- App: action_* methods exist for every single-key binding --------------

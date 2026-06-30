@@ -255,8 +255,10 @@ def test_startup_snapshot_keys() -> None:
     # T24 wired BINDINGS via register_f_bindings() (10 F-row entries).
     # T25 extended it with register_single_key_bindings() (8 more entries).
     # Wave 7 added 1 extra single-key entry (lowercase ``p`` → toggle_pause)
-    # via register_extra_bindings(). Total: 10 F + 8 single + 1 extra = 19.
-    assert len(snap["bindings"]) == 19
+    # via register_extra_bindings(); Wave 8 added a 2nd extra
+    # (``d`` → toggle_delegate) for the delegation feature.
+    # Total: 10 F + 8 single + 2 extras = 20.
+    assert len(snap["bindings"]) == 20
     assert len(snap["bindings"][:10]) == 10
     assert snap["initial_state_tick"] == 0
     assert snap["initial_rng_seed"] == 42

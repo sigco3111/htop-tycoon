@@ -253,11 +253,12 @@ class TestOutOfListKeys:
     Wave 7 note: the time-stop feature has two affordances — the
     ``#pause-button`` UI button in the header, and the lowercase
     ``p`` keyboard shortcut registered via ``register_extra_bindings()``.
-    F11 is reserved on macOS (Show Desktop) and F12 fires F10 in
-    Textual 0.89.x (F-key prefix-match bug), so neither F-key is
-    bound; we test them here to keep the contract that unbound F-keys
-    are no-ops. The ``p`` shortcut has its own dedicated test in
-    ``tests/test_single_key_bindings_pilot.py``.
+    Wave 8 extended the extras block with ``d`` → ``toggle_delegate``
+    for the delegation feature. F11 is reserved on macOS (Show
+    Desktop) and F12 fires F10 in Textual 0.89.x (F-key prefix-match
+    bug), so neither F-key is bound; we test them here to keep the
+    contract that unbound F-keys are no-ops. The ``p`` shortcut has
+    its own dedicated test in ``tests/test_single_key_bindings_pilot.py``.
     """
 
     async def test_f11_does_not_crash_and_does_not_fire_any_action(
@@ -305,8 +306,8 @@ class TestOutOfListKeys:
 
         T25 extended ``BINDINGS`` with the single-key entries; this test
         iterates only the F-row slice so the T24 contract stays locked.
-        The full 19-entry behavior (including single-key actions and
-        the Wave 7 lowercase ``p`` extra) is pinned by
+        The full 20-entry behavior (including single-key actions and
+        the Wave 7 lowercase ``p`` + Wave 8 ``d`` extras) is pinned by
         ``tests/test_single_key_bindings_pilot.py``.
         """
         app = HtopTycoonApp(seed=42, tick_rate=100, no_autosave=True)
