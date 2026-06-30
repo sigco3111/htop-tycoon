@@ -11,7 +11,7 @@ Locks the contract from ``.omo/plans/htop-tycoon.md`` line 515-524:
 
 - The single-key row is::
 
-      t:트리 u:부서필터 m:만족도 s:급여 i:전략 ↑↓:이동 Space:태그 p:일시정지 d:위임
+      t:트리 u:부서추가 h:고용 m:만족도 s:급여 i:전략 ↑↓:이동 Space:태그 p:일시정지 d:위임
 
 - The footer MUST NOT use htop's original English F-key labels
   (F7Nice-, F8Nice+, F9Kill, F10Quit) — those describe real htop behavior
@@ -61,7 +61,7 @@ F_ROW: str = (
 # - The trailing ``d:위임`` is the Wave 7 delegation shortcut
 #   (lowercase ``d`` → delegate selected employee).
 SINGLE_KEY_ROW: str = (
-    "t:트리 u:부서필터 m:만족도 s:급여 i:전략 ↑↓:이동 Space:태그 p:일시정지 d:위임"
+    "t:트리 u:부서추가 h:고용 m:만족도 s:급여 i:전략 ↑↓:이동 Space:태그 p:일시정지 d:위임"
 )
 
 

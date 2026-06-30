@@ -101,7 +101,8 @@ def register_single_key_bindings() -> list[Binding]:
     """
     return [
         Binding("t", "toggle_tree", "트리 토글", show=False),
-        Binding("u", "filter_by_dept", "부서 필터", show=False),
+        Binding("u", "unlock_department", "부서추가", show=False),
+        Binding("h", "hire", "고용", show=False),
         Binding("m", "sort_by_satisfaction", show=False),
         Binding("s", "sort_by_salary", show=False),
         Binding("up", "cursor_up", show=False),

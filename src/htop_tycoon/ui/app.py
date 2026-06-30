@@ -785,6 +785,35 @@ class HtopTycoonApp(App[None]):
                 table.filter_by_department(dept_id)
 
         self.push_screen(_DP(self), callback=_on_dismiss)
+    def action_filter_by_dept(self) -> None:
+        # Legacy entry-point for the dept-picker modal; the ``u`` key
+        # is reassigned in Wave 8 (T46) to ``unlock_department``. The
+        # modal still exists in the bindings table via the F-key
+        # shortcut (F4 path), so direct calls to this method work.
+        from htop_tycoon.ui import action_handlers
+        action_handlers.filter_by_dept(self)
+
+    def action_hire(self) -> None:
+        """Single-key ``h`` — hire one employee into the first open dept.
+
+        Wave 8 (T46 follow-up) — direct user action. Delegates to
+        the action_handlers implementation which calls
+        ``engine.actions.hire`` on the first dept with room.
+        """
+        from htop_tycoon.ui import action_handlers
+        action_handlers.hire_first_open_dept(self)
+
+    def action_unlock_dept(self) -> None:
+        """Single-key ``u`` — unlock the cheapest next dept.
+
+        Wave 8 (T46 follow-up) — replaces the previous ``u =
+        filter_by_dept`` mnemonic. The user unlocks dept with cash
+        from balance.yaml unlock_costs. Iterates DepartmentType in
+        name order and picks the first one not yet present.
+        """
+        from htop_tycoon.ui import action_handlers
+        action_handlers.unlock_next_locked_dept(self)
+
     def action_focus_picker(self) -> None:
         """Open the per-dept focus picker modal (i key).
 

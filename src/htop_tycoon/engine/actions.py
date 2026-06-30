@@ -26,7 +26,103 @@ from htop_tycoon.engine.events import (
 from htop_tycoon.engine.names import generate_korean_name
 from htop_tycoon.engine.rng import GameRNG
 
-__all__ = ["demote", "fire", "hire", "promote"]
+
+def unlock_department(
+    state: GameState,
+    dept_type_name: str,
+    balance: dict[str, object],
+) -> tuple[GameState, list[Event]]:
+    """Unlock (create) a new department of the given type.
+
+    Deducts the unlock cost from state.company.cash and adds a new
+    Department with unlocked=True, an empty roster, and a
+    deterministic DepartmentId. Returns the new state and
+    [DepartmentUnlocked(...)].
+
+    The dept type name must be one of the 5 locked DepartmentType
+    names: Engineering, Sales, Operations, Marketing, Finance. The
+    cost is read from
+    balance["departments"]["unlock_costs"][dept_type_name].
+
+    Raises:
+        ValueError: unknown dept type name.
+        ValueError: a dept of this type is already unlocked.
+        ValueError: insufficient cash.
+
+    Wave 8 (T46 follow-up) — unlocks the spec'd-but-never-implemented
+    hire/dept UI. Pure: returns a new state via dataclasses.replace,
+    no in-place mutation, no event_bus.publish (caller publishes).
+    """
+    from htop_tycoon.domain.dept import Department, DepartmentType
+
+    if dept_type_name not in DepartmentType.__members__:
+        raise ValueError(
+            f"unknown dept type {dept_type_name!r}; valid: "
+            f"{list(DepartmentType.__members__)}"
+        )
+    dept_type = DepartmentType[dept_type_name]
+    for existing in state.departments.values():
+        if existing.type is dept_type:
+            raise ValueError(
+                f"department type {dept_type_name!r} is already unlocked"
+            )
+    unlock_costs = balance.get("departments", {}).get("unlock_costs", {})
+    if not isinstance(unlock_costs, dict):
+        raise ValueError("balance.departments.unlock_costs missing or malformed")
+    cost = unlock_costs.get(dept_type_name)
+    if cost is None:
+        raise ValueError(f"unlock_costs missing entry for {dept_type_name!r}")
+    cost_i = int(cost)
+    if state.company.cash < cost_i:
+        raise ValueError(
+            f"insufficient cash to unlock {dept_type_name!r}: "
+            f"have {state.company.cash}, need {cost_i}"
+        )
+    new_dept_id = DepartmentId(f"dept-{dept_type_name.lower()}-1")
+    suffix = 1
+    while new_dept_id in state.departments:
+        suffix += 1
+        new_dept_id = DepartmentId(f"dept-{dept_type_name.lower()}-{suffix}")
+    new_dept = Department(
+        id=new_dept_id,
+        type=dept_type,
+        head_employee_id=None,
+        employee_ids=[],
+        founded_tick=state.tick,
+        unlocked=True,
+    )
+    new_company = dataclasses.replace(
+        state.company, cash=state.company.cash - cost_i
+    )
+    new_state = dataclasses.replace(
+        state,
+        company=new_company,
+        departments={**state.departments, new_dept_id: new_dept},
+    )
+    return new_state, [
+        DepartmentUnlocked(
+            kind="department_unlocked",
+            dept_id=new_dept_id,
+            dept_type=dept_type,
+            cost=cost_i,
+        )
+    ]
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class DepartmentUnlocked(Event):
+    """Engine signal: a new department was unlocked.
+
+    Carries the new dept id, its type, and the cost charged. The App
+    layer can use this to re-render the OrgTree.
+    """
+
+    kind: str
+    dept_id: DepartmentId
+    dept_type: Any
+    cost: int
+
+__all__ = ["DepartmentUnlocked", "demote", "fire", "hire", "promote", "unlock_department"]
 
 
 def _effective_skill_hi(

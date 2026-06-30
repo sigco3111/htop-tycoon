@@ -331,3 +331,84 @@ def focus_picker(app: HtopTycoonApp) -> None:
 
     _record(app, "focus_picker", "전략")
     app.push_screen(FocusPickerScreen(app))
+
+
+def hire_first_open_dept(app: HtopTycoonApp) -> None:
+    """Single-key ``h`` — hire one employee into the first open dept.
+
+    Wave 8 (T46 follow-up) — direct user action. Calls
+    :func:`engine.actions.hire` on the first dept in
+    ``state.departments`` that has ``len(employee_ids) < max_per_dept``.
+
+    No-op if all depts are full. Records the action via ``_record``
+    and publishes ``EmployeeHired`` if hire succeeded (the action
+    itself returns the event list). No ``event_bus.publish`` inside
+    this handler per AGENTS.md.
+    """
+    from htop_tycoon.data import load_balance
+    from htop_tycoon.engine.actions import hire as engine_hire
+
+    _record(app, "hire", "고용")
+    state = app.state
+    depts_with_room = [
+        (dept_id, dept)
+        for dept_id, dept in state.departments.items()
+        if getattr(dept, "unlocked", False)
+        and len(getattr(dept, "employee_ids", []))
+        < int(load_balance()["departments"]["max_employees_per_dept"])
+    ]
+    if not depts_with_room:
+        return  # no room anywhere; silent no-op
+    dept_id, _dept = depts_with_room[0]
+    new_state, events = engine_hire(state, dept_id, app._rng)
+    app.state = new_state
+    bus = getattr(app, "event_bus", None)
+    if bus is not None:
+        for ev in events:
+            bus.publish(ev)
+        # OrgTree/EmployeeTable do not subscribe to StateUpdated (their
+        # sort/filter is self-contained). Force a refresh so the new
+        # employee shows in the table.
+        from htop_tycoon.engine.events import StateUpdated
+        bus.publish(StateUpdated(state=new_state))
+
+
+def unlock_next_locked_dept(app: HtopTycoonApp) -> None:
+    """Single-key ``u`` — unlock the cheapest next dept.
+
+    Wave 8 (T46 follow-up) — replaces the lost ``u`` for filter_by_dept
+    (the dept-picker modal subsumes the per-dept filter; see the Wave 7
+    follow-up notes). Calls :func:`engine.actions.unlock_department`
+    on the cheapest currently-locked DepartmentType.
+
+    Iterates ``DepartmentType`` in name order and picks the first one
+    not yet present in ``state.departments``. No-op if all 5 are
+    unlocked. Records the action and publishes ``DepartmentUnlocked``
+    on success.
+    """
+    from htop_tycoon.data import load_balance
+    from htop_tycoon.domain.dept import DepartmentType
+    from htop_tycoon.engine.actions import unlock_department
+
+    _record(app, "unlock_department", "부서추가")
+    state = app.state
+    balance = load_balance()
+    existing_types = {d.type for d in state.departments.values()}
+    for dept_type in DepartmentType:
+        if dept_type not in existing_types:
+            try:
+                new_state, events = unlock_department(
+                    state, dept_type.name, balance
+                )
+            except ValueError:
+                # Insufficient cash or other recoverable issue;
+                # silent no-op so the key is non-destructive.
+                continue
+            app.state = new_state
+            bus = getattr(app, "event_bus", None)
+            if bus is not None:
+                for ev in events:
+                    bus.publish(ev)
+                from htop_tycoon.engine.events import StateUpdated
+                bus.publish(StateUpdated(state=new_state))
+            return
