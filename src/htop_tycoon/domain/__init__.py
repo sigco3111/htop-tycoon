@@ -4,7 +4,7 @@ Pure, serializable types shared by the engine and the UI:
   - Enumerations (department, job, quality axis, platform, ending, action)
   - Opaque ID types and their UUID4 factories
   - Pure helpers (nice_value, quality_weight, JOBS_BY_DEPARTMENT)
-  - Aggregate dataclasses (GameProject, ConsoleMarket, Market, Event, ...)
+  - Aggregate dataclasses (GameProject, ConsoleMarket, Market, Event, GameState, ...)
 
 This package depends on nothing else in the project. The engine imports
 from here; the UI imports from here. Nothing imports from the engine or
@@ -30,15 +30,16 @@ Public API (re-exported here for ``from htop_tycoon.domain import ...``):
       ThemeId, PlatformId, DeptId
     - new_*_id() factories for each
 
-  Aggregates (T10):
-    - GameProject    — a single game project (spec §2.2)
-    - ConsoleMarket  — per-console market state (spec §2.3, §2.8)
-    - Market         — top-level market state container (spec §2.6)
+  Aggregates:
+    - Employee        — single hire (spec §2.5)
+    - GameProject     — a single game project (spec §2.2)
+    - ConsoleMarket   — per-console market state (spec §2.3, §2.8)
+    - Market          — top-level market state container (spec §2.6)
     - Event / EventKind — event bus payload (spec §5.3)
-
-  Other aggregates:
     - LegacyScore / AchievementUnlock
     - Ending
+    - GameState       — single serialization boundary root (spec §5.3)
+    - compute_game_state_hash() — spec §7.3 deterministic hash
 """
 from htop_tycoon.domain.console_market import ConsoleMarket
 from htop_tycoon.domain.employee import Employee
@@ -75,6 +76,12 @@ from htop_tycoon.domain.ids import (
 from htop_tycoon.domain.legacy import AchievementUnlock, LegacyScore
 from htop_tycoon.domain.market import Market
 from htop_tycoon.domain.project import GameProject
+from htop_tycoon.domain.state import (
+    DEFAULT_RNG_SEED,
+    DEFAULT_STARTING_CASH,
+    GameState,
+    compute_game_state_hash,
+)
 
 __all__ = [
     # Enumerations
@@ -105,15 +112,18 @@ __all__ = [
     "new_platform_id",
     "new_project_id",
     "new_theme_id",
-    # Aggregate dataclasses (T10)
+    # Aggregate dataclasses
+    "AchievementUnlock",
     "ConsoleMarket",
+    "DEFAULT_RNG_SEED",
+    "DEFAULT_STARTING_CASH",
     "Employee",
+    "Ending",
     "Event",
     "EventKind",
     "GameProject",
-    "Market",
-    # Other aggregates
-    "AchievementUnlock",
+    "GameState",
     "LegacyScore",
-    "Ending",
+    "Market",
+    "compute_game_state_hash",
 ]
