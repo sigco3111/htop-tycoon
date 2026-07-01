@@ -1,0 +1,22 @@
+# htop-tycoon v3.0 — Wave 3 partial-lock frozen state hashes.
+#
+# Per spec §7.3: "Capture procedure: Implement engine + persistence with no
+# frozen hashes yet. Run python -m htop_tycoon --seed=42 --tick-rate=0.01
+# --ticks=N for each N. Capture state.compute_hash() outputs."
+#
+# These were captured after Wave 3 (engine layer, no persistence yet) —
+# the "partial lock" decision per the project plan. Wave 5+ (persistence)
+# will re-capture the values; any drift between Wave 3 and Wave 5 frozen
+# hashes indicates a determinism regression somewhere in the engine +
+# serialization path.
+#
+# Captured: 2026-07-01
+# Engine: tick.run_day for N ticks, GameState(rng_seed=42), GameRNG(42).
+
+seed: 42
+
+# day-count from GameState(rng_seed=42) -> compute_hash()
+state_hash_at_day:
+  100: "0792c34bbacfe4ae42e591f85a89264fa064403634d419cd2eeffa1e0662a913"
+  1000: "c1050d96718e2021e01242cb3d2a43624098c113b1dc138a2f84bea1efcab3c8"
+  3650: "fabf2a4ba9d7af30e7e995f8a5a0eaa177b4879af65f247a7d49c12d62ff4903"
