@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "htop-tycoon"
-version = "0.2.0"
-description = "htop-styled TUI business simulator with 5 endings, Korean UI, and seedable deterministic simulation"
+version = "3.0.0"
+description = "htop-styled TUI port of Kairosoft's Game Dev Story with Strategy Manager delegation"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
