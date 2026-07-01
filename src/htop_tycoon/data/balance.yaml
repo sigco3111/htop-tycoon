@@ -1,0 +1,102 @@
+# htop-tycoon v3.0 balance constants
+# AGENTS.md invariant: all magic numbers in the engine MUST be sourced from here.
+# Spec sections referenced inline. Korean comments label in-game semantics.
+
+salaries:
+  # Base salary per game day, per job type (G). Salary * 1.2 per level-up (spec §2.5).
+  base_daily:
+    producer: 400
+    game_designer: 300
+    programmer: 320
+    graphic_artist: 280
+    sound_creator: 260
+    hacker: 350
+    hw_engineer: 500
+  per_level_multiplier: 1.2
+
+costs:
+  # One-time cost in G.
+  hire_cost: 1000
+  fire_severance: 500
+  train_cost_per_level: 800
+  console_license_fee: 15000
+
+cash:
+  starting_cash: 50000
+  bankruptcy_threshold: -50000
+  voluntary_sale_threshold: 200000
+
+ai:
+  # Strategy Manager (spec §3).
+  max_actions_per_day: 10
+  aggression:
+    cash_min_hire: 30000
+    cash_min_train: 5000
+  conservative:
+    cash_min_hire: 100000
+    cash_min_start_project: 50000
+  balanced:
+    cash_min_hire: 50000
+    cash_min_start_project: 20000
+
+time:
+  initial_speed: 1
+  max_user_speed: 3
+  headless_speed: 4
+  ticks_per_quarter: 90
+  days_per_year: 365
+
+awards:
+  # Spec §2.4.
+  year_end:
+    first_prize: 200000
+    second_prize: 100000
+    third_prize: 50000
+    trash_penalty: 100000
+  game_show:
+    fan_boost_pct: 0.50
+    duration_days: 180
+    participation_cost: 20000
+  eligibility:
+    year_end_min_score: 5.0
+    trash_max_score: 4.0
+
+fans:
+  # Spec §2.6.
+  per_sale_factor: 1.0
+  decay_per_quarter_pct: 0.02
+  base_fan_factor: 0.001
+
+sales:
+  # Spec §2.2 step 8.
+  royalty_licensed: 0.15
+  royalty_own: 0.0
+  quality_avg_divisor: 10
+  popularity_weight: 1.0
+  fan_factor_weight: 1.0
+
+zombie:
+  # "Z" processes in the htop metaphor = stuck projects / unsatisfied staff.
+  stuck_threshold_days: 7
+  satisfaction_threshold: 0.20
+
+employee:
+  max_level: 5
+  job_change_multiplier: 1.2
+  max_jobs: 6
+
+console_discontinue:
+  default_decline_rate: 0.15
+  min_popularity_for_release: 0.0
+
+save:
+  schema_version: 1
+  atomic_write: true
+  backup_count: 3
+
+ending:
+  # Spec §1.4 + §9 success criteria.
+  mega_hit_sales_threshold: 1000000
+  hall_of_fame_min_count: 5
+  hall_of_fame_min_score: 8.0
+  secret_ending_requires_mega_hit_on_own: true
