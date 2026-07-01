@@ -134,8 +134,9 @@ class HtopTycoonApp(App[None]):
         active = next((p for p in self._state.projects if not p.is_complete), None)
         self.query_one(MetricBar).project = active
 
-    # Action dispatch — spec §4.1 actions (no-op stubs for Wave 6 first pass;
-    # real implementations arrive as the screens are added)
+    # Action dispatch — spec §4.1 actions. The strategy_picker and
+    # game_starter push the modal screens. Save delegates to the persistence
+    # layer (spec §6). Auto toggle and speed control are simple flags.
     def action_help(self) -> None:
         self.query_one("#content", Static).update(
             "[bold]도움말 (Help)[/]\n\n"
@@ -149,8 +150,135 @@ class HtopTycoonApp(App[None]):
             "F8 / [ — 감봉\n"
             "F9 / k — 해고\n"
             "F10 / q — 종료/매각\n"
+            "s — 전략 선택 (Strategy Picker)\n"
+            "n — 새 게임 (New Game)\n"
             "0 — 정지, 1-3 — 속도, 4 — 4x (QA)\n"
         )
+
+    def action_strategy_picker(self) -> None:
+        """Spec §4.1: 's' opens the StrategyPickerScreen."""
+        from htop_tycoon.ui.screens.strategy_picker import StrategyPickerScreen
+        self.push_screen(StrategyPickerScreen())
+
+    def action_start_game(self) -> None:
+        """Spec §4.1: 'n' opens the GameStarterScreen."""
+        from htop_tycoon.ui.screens.game_starter import GameStarterScreen
+        self.push_screen(GameStarterScreen())
+
+    def action_save(self) -> None:
+        """Spec §4.1: 'F2' / 'S' saves current state via persistence layer."""
+        from pathlib import Path
+
+        from htop_tycoon.persistence import save_state
+        target = Path.home() / ".htop_tycoon_save.json"
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            save_state(target, self._state)
+            self.query_one("#content", Static).update(
+                f"[green]저장 완료 (saved to {target})[/]"
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.query_one("#content", Static).update(
+                f"[red]저장 실패 (save failed): {exc}[/]"
+            )
+
+    def action_toggle_auto(self) -> None:
+        """Spec §3.3: 'd' toggles auto mode on/off."""
+        self.auto_mode = not self.auto_mode
+        status = "ON" if self.auto_mode else "OFF"
+        self.query_one("#content", Static).update(
+            f"[cyan]Auto 모드: {status}[/]"
+        )
+
+    def action_toggle_pause(self) -> None:
+        """Spec §4.1: 'p' toggles pause (speed = 0 ↔ previous speed)."""
+        if self.speed == 0:
+            self.speed = 1  # resume at default 1x
+        else:
+            self.speed = 0
+        # Recompute tick interval based on new speed
+        if self.speed > 0:
+            self.set_interval(1.0 / self.speed, self._tick_one_day)
+        status = "재개 (resumed)" if self.speed > 0 else "일시정지 (paused)"
+        self.query_one("#content", Static).update(f"[cyan]{status}[/]")
+
+    def action_speed_0(self) -> None:
+        self.speed = 0
+        self.query_one("#content", Static).update("[cyan]속도: 정지 (0)[/]")
+
+    def action_speed_1(self) -> None:
+        self.speed = 1
+        self.query_one("#content", Static).update("[cyan]속도: 1x[/]")
+
+    def action_speed_2(self) -> None:
+        self.speed = 2
+        self.query_one("#content", Static).update("[cyan]속도: 2x[/]")
+
+    def action_speed_3(self) -> None:
+        self.speed = 3
+        self.query_one("#content", Static).update("[cyan]속도: 3x[/]")
+
+    def action_speed_4(self) -> None:
+        self.speed = 4
+        self.query_one("#content", Static).update("[cyan]속도: 4x (QA)[/]")
+
+    def action_quit_or_sell(self) -> None:
+        """Spec §4.1: F10/q opens the quit/sell dialog (Wave 6+ follow-up)."""
+        from pathlib import Path
+
+        from htop_tycoon.persistence import save_state
+        target = Path.home() / ".htop_tycoon_save.json"
+        try:
+            save_state(target, self._state)
+        except Exception:  # noqa: BLE001
+            pass
+        self.exit()
+
+    def action_cursor_up(self) -> None:
+        self.query_one("#content", Static).update("[dim]↑ (Wave 6+: table navigation)[/]")
+
+    def action_cursor_down(self) -> None:
+        self.query_one("#content", Static).update("[dim]↓ (Wave 6+: table navigation)[/]")
+
+    def action_select(self) -> None:
+        self.query_one("#content", Static).update("[dim]Enter (Wave 6+: select row)[/]")
+
+    def action_close_modal(self) -> None:
+        # Spec §4.1: Escape closes any open modal.
+        if len(self.screen_stack) > 1:
+            self.pop_screen()
+
+    def action_awards(self) -> None:
+        self.query_one("#content", Static).update("[dim]a — 시상식 (Wave 6+: modal)[/]")
+
+    def action_console_mgmt(self) -> None:
+        self.query_one("#content", Static).update("[dim]c — 콘솔 관리 (Wave 6+: modal)[/]")
+
+    def action_view_project(self) -> None:
+        self.query_one("#content", Static).update(
+            "[dim]g — 프로젝트 진행 보기 (Wave 6+: screen)[/]"
+        )
+
+    def action_search_employee(self) -> None:
+        self.query_one("#content", Static).update("[dim]/ — 직원 검색 (Wave 6+: input)[/]")
+
+    def action_filter(self) -> None:
+        self.query_one("#content", Static).update("[dim]\\\\ — 필터 (Wave 6+: input)[/]")
+
+    def action_sort_cycle(self) -> None:
+        self.query_one("#content", Static).update("[dim]/ — 정렬 사이클 (Wave 6+)[/]")
+
+    def action_promote(self) -> None:
+        self.query_one("#content", Static).update("[dim]] — 승진 (Wave 6+: input)[/]")
+
+    def action_demote(self) -> None:
+        self.query_one("#content", Static).update("[dim][ — 감봉 (Wave 6+: input)[/]")
+
+    def action_fire(self) -> None:
+        self.query_one("#content", Static).update("[dim]k — 해고 (Wave 6+: input)[/]")
+
+    def action_toggle_dept_tree(self) -> None:
+        self.query_one("#content", Static).update("[dim]t — 부서 트리 토글 (Wave 6+)[/]")
 
 
 __all__ = ["HtopTycoonApp"]
