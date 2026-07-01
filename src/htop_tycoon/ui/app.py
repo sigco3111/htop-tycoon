@@ -19,7 +19,14 @@ from textual.widgets import Static
 
 from htop_tycoon.bindings.registry import BINDINGS, validate_bindings
 from htop_tycoon.domain import GameState
-from htop_tycoon.ui.widgets import HtopFooter, HtopHeader, MetricBar
+from htop_tycoon.ui.widgets import (
+    EmployeeTable,
+    HtopFooter,
+    HtopHeader,
+    MetricBar,
+    OrgTree,
+    StrategyStatus,
+)
 
 # Module-level so the BINDINGS class-body generator expression can see it
 # (class-body generator expressions don't capture other class-scope names).
@@ -98,6 +105,9 @@ class HtopTycoonApp(App[None]):
                 id="content",
             )
             yield MetricBar(id="metric")
+            yield EmployeeTable(id="employee-table")
+            yield StrategyStatus(id="strategy-status")
+        yield OrgTree(id="org-tree")
         yield HtopFooter(id="footer")
 
     def on_mount(self) -> None:

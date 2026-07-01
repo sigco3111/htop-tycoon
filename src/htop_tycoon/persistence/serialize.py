@@ -8,9 +8,7 @@ test verify that a load + save roundtrip is bit-identical.
 """
 from __future__ import annotations
 
-import dataclasses
 import json
-from types import MappingProxyType
 from typing import Any
 
 from htop_tycoon.domain import (
@@ -81,12 +79,15 @@ def _build_employee(e: dict[str, Any]) -> Employee:
 
     Employee has two ``init=False`` fields (``salary_daily`` and
     ``skill_per_axis``) computed in ``__post_init__`` from ``(job, level)``.
-    The serialized form carries both fields explicitly so we use
-    ``dataclasses.replace`` to override the computed values with the
-    deserialized ones (this preserves the roundtrip invariant under
-    ``compute_hash``).
+    Because they are ``init=False``, ``dataclasses.replace`` cannot override
+    them — the reconstructed Employee must rely on ``__post_init__`` to
+    recompute them. This is safe because the saved fields are themselves
+    the output of the same ``__post_init__`` computation on the same
+    ``(job, level)`` pair, so the roundtrip is exact under ``compute_hash``.
     """
-    emp = Employee(
+    # Build with the init=True fields only; __post_init__ fills in the
+    # init=False fields (salary_daily, skill_per_axis) deterministically.
+    return Employee(
         id=e["id"],
         name=e["name"],
         dept=e["dept"],
@@ -94,14 +95,6 @@ def _build_employee(e: dict[str, Any]) -> Employee:
         level=e["level"],
         satisfaction=e.get("satisfaction", 0.6),
         joined_day=e.get("joined_day", 1),
-    )
-    skill_dict = {
-        _quality_axis_from_str(k): float(v)
-        for k, v in e.get("skill_per_axis", {}).items()
-    }
-    return dataclasses.replace(
-        emp,
-        skill_per_axis=MappingProxyType(skill_dict),
     )
 
 
