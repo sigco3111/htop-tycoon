@@ -4,30 +4,21 @@ Pure-function pipeline that advances the simulation by one game-day:
 
   1. Strategy Manager decides (skipped here — Wave 4)
   2. Execute planned actions (skipped here — manual play only in Wave 3)
-  3. Advance in-progress games      (inline stub; real impl lands in game_dev.py)
+  3. Advance in-progress games      (engine.game_dev.advance_projects)
   4. Market dynamics                (engine.market.tick_market)
   5. End-of-day / award events      (engine.award.* — invoked by UI / cron, not per-day)
   6. Endings check                  (engine.endings.check_endings)
 
 Returns ``(new_state, [events])``. No I/O. No mutation. Deterministic given
 the same ``(state, seed)`` per spec §7.3.
-
-Wave 3-D scope:
-    Replaced the inline market / endings stubs with real calls into the
-    newly-added ``engine.market`` and ``engine.endings`` modules. The
-    project-advance stub remains (game_dev.py is Wave 3-B).
 """
 from __future__ import annotations
 
 from htop_tycoon.domain import Event, GameState
 from htop_tycoon.engine.endings import check_endings
+from htop_tycoon.engine.game_dev import advance_projects
 from htop_tycoon.engine.market import tick_market
 from htop_tycoon.engine.rng import GameRNG
-
-
-def _stub_advance_projects(state: GameState) -> tuple[GameState, list[Event]]:
-    """Inline stub for ``engine.game_dev.advance_projects``. No-op until W3-B."""
-    return state, []
 
 
 def run_day(state: GameState, rng: GameRNG) -> tuple[GameState, list[Event]]:
@@ -38,8 +29,8 @@ def run_day(state: GameState, rng: GameRNG) -> tuple[GameState, list[Event]]:
     new_state = state.replace(day=state.day + 1)
     events: list[Event] = []
 
-    # 3. advance in-progress games (stub until game_dev.py lands)
-    new_state, proj_events = _stub_advance_projects(new_state)
+    # 3. advance in-progress games (real impl from engine.game_dev)
+    new_state, proj_events = advance_projects(new_state)
     events.extend(proj_events)
 
     # 4. market dynamics (real impl from engine.market)

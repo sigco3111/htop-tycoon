@@ -36,11 +36,18 @@ from htop_tycoon.engine.award import run_game_show, run_year_end_ceremony
 from htop_tycoon.engine.endings import check_endings
 from htop_tycoon.engine.market import tick_market
 from htop_tycoon.engine.rng import CORRUPTION_RECOVERY_SEED, GameRNG
+from htop_tycoon.engine.sales import (
+    FANS_PER_COPY,
+    compute_sales,
+    fans_gained_from_sales,
+    get_combo_multiplier,
+)
 from htop_tycoon.engine.tick import run_day
 
 __all__ = [
     "CONSOLE_LICENSE_FEE",
     "CORRUPTION_RECOVERY_SEED",
+    "FANS_PER_COPY",
     "FIRE_SEVERANCE",
     "GameRNG",
     "HIRE_COST",
@@ -51,8 +58,11 @@ __all__ = [
     "assign",
     "change_job",
     "check_endings",
+    "compute_sales",
     "demote",
+    "fans_gained_from_sales",
     "fire",
+    "get_combo_multiplier",
     "hire",
     "nothing",
     "promote",

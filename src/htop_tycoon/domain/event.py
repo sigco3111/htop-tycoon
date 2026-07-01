@@ -10,7 +10,7 @@ __all__ = ["Event", "EventKind"]
 
 EventKind = Literal[
     "tick", "hire", "fire", "train", "start_game", "assign",
-    "promote", "demote", "change_job", "sales", "award",
+    "promote", "demote", "change_job", "sales", "award", "milestone",
     "fan_decay", "console_discontinue", "ending",
 ]
 
