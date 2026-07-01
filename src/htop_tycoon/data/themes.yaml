@@ -1,0 +1,122 @@
+# htop-tycoon v3.0 — 30 themes (spec §2.7, exact list)
+# Korean label first per project convention; English label second.
+
+- id: fantasy
+  name_ko: 판타지
+  name_en: Fantasy
+
+- id: sf
+  name_ko: SF
+  name_en: Sci-Fi
+
+- id: modern
+  name_ko: 현대
+  name_en: Modern
+
+- id: historical
+  name_ko: 역사
+  name_en: Historical
+
+- id: future
+  name_ko: 미래
+  name_en: Future
+
+- id: fairy_tale
+  name_ko: 동화
+  name_en: Fairy Tale
+
+- id: martial_arts
+  name_ko: 무협
+  name_en: Martial Arts
+
+- id: school
+  name_ko: 학원
+  name_en: School
+
+- id: yokai
+  name_ko: 요괴
+  name_en: Yokai
+
+- id: zombie
+  name_ko: 좀비
+  name_en: Zombie
+
+- id: space
+  name_ko: 우주
+  name_en: Space
+
+- id: stealth
+  name_ko: 잠입
+  name_en: Stealth
+
+- id: pirate
+  name_ko: 해적
+  name_en: Pirate
+
+- id: samurai
+  name_ko: 사무라이
+  name_en: Samurai
+
+- id: cooking
+  name_ko: 요리
+  name_en: Cooking
+
+- id: music
+  name_ko: 음악
+  name_en: Music
+
+- id: sports
+  name_ko: 운동
+  name_en: Sports
+
+- id: fashion
+  name_ko: 패션
+  name_en: Fashion
+
+- id: romance
+  name_ko: 연애
+  name_en: Romance
+
+- id: mystery
+  name_ko: 추리
+  name_en: Mystery
+
+- id: courtroom
+  name_ko: 법정
+  name_en: Courtroom
+
+- id: time_travel
+  name_ko: 시간여행
+  name_en: Time Travel
+
+- id: magic
+  name_ko: 마법
+  name_en: Magic
+
+- id: robot
+  name_ko: 로봇
+  name_en: Robot
+
+- id: animal
+  name_ko: 동물
+  name_en: Animal
+
+- id: medical
+  name_ko: 의학
+  name_en: Medical
+
+- id: automobile
+  name_ko: 자동차
+  name_en: Automobile
+
+- id: aviation
+  name_ko: 비행
+  name_en: Aviation
+
+- id: stock_market
+  name_ko: 주식
+  name_en: Stock Market
+
+- id: game
+  name_ko: 게임
+  name_en: Game
