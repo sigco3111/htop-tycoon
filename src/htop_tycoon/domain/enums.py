@@ -1,5 +1,12 @@
 """htop-tycoon v3.0 — pure-domain enumerations and ActionKind literal.
 
+Tunable economic constants (royalty rates, platform lifecycle curves, etc.)
+live in two places: this file (categorical definitions used at compile-time)
+and `src/htop_tycoon/data/consoles.yaml` / `balance.yaml` (canonical source
+for tunable knobs used at runtime). Wave 2+ will add a `ConsoleMarket`
+loader that reads from the YAMLs and replaces the in-code constants; do
+not edit either side without consulting the other.
+
 Size note: allow SIZE_OK — pure-data-table file. Each enum class is a
 declaration plus 1-4 immutable lookup dicts (Korean/English labels,
 priorities, royalty rates, quality contributions). There is no logic to
@@ -412,12 +419,17 @@ def quality_weight(job_index: int, level: int, axis: QualityAxis) -> float:
         axis: The quality axis to query.
 
     Returns:
-        Contribution weight as a float. Returns 0.0 for axis the job does
-        not contribute to, and for HW_ENGINEER (which has no standard
-        job_index slot — its contribution is empty).
+        Contribution weight as a float. Returns 0.0 only for axes the job
+        does not contribute to (the job's contribution table has no entry
+        for that axis).
 
     Raises:
         ValueError: If job_index is outside 0..5 or level is outside 1..5.
+
+    Note:
+        HW_ENGINEER is unreachable here — it has no entry in
+        ``_JOB_INDEX_ORDER`` (pride job, post-Secret), so any call with
+        a valid ``job_index`` resolves to one of the 6 base jobs.
     """
     job = _JOB_BY_INDEX.get(job_index)
     if job is None:
