@@ -29,6 +29,8 @@ Public API (re-exported here for ``from htop_tycoon.domain import ...``):
       ThemeId, PlatformId, DeptId
     - new_*_id() factories for each
 """
+from htop_tycoon.domain.ending import Ending
+from htop_tycoon.domain.employee import Employee
 from htop_tycoon.domain.enums import (
     JOBS_BY_DEPARTMENT,
     ActionKind,
@@ -57,8 +59,11 @@ from htop_tycoon.domain.ids import (
     new_project_id,
     new_theme_id,
 )
+from htop_tycoon.domain.legacy import AchievementUnlock, LegacyScore
 
 __all__ = [
+    # Aggregates
+    "Employee",
     # Enumerations
     "ActionKind",
     "Department",
@@ -87,4 +92,7 @@ __all__ = [
     "new_platform_id",
     "new_project_id",
     "new_theme_id",
+    "AchievementUnlock",
+    "LegacyScore",
+    "Ending",
 ]
