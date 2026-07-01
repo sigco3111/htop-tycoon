@@ -4,6 +4,7 @@ Enforces two invariants:
   1. GameRNG(seed) is reproducible and exposes a stable interface.
   2. No bare `import random` / `from random` exists outside engine/rng.py.
 """
+import os
 import subprocess
 
 import pytest
@@ -78,15 +79,24 @@ def test_corruption_recovery_seed_is_zero() -> None:
 
 
 def test_no_bare_random_import_outside_rng() -> None:
-    """Enforce anti-pattern: no `import random` outside engine/rng.py."""
+    """Enforce anti-pattern: no `import random` / `from random` outside engine/rng.py.
+
+    Uses ``grep -E`` (extended regex) so ``|`` is treated as alternation;
+    without ``-E``, BRE treats ``|`` as a literal character and the test
+    vacuously passes (regressions slip through silently). Also CWD-independent
+    via absolute path so IDE test runners behave correctly.
+    """
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    src_path = os.path.join(repo_root, "src", "htop_tycoon")
+    allowed_abs = os.path.join(src_path, "engine", "rng.py")
     result = subprocess.run(
-        ["grep", "-rn", "--include=*.py", r"^import random|^from random", "src/htop_tycoon/"],
+        ["grep", "-rnE", "--include=*.py", r"^(import|from)\s+random\b", src_path],
         capture_output=True,
         text=True,
+        check=False,
     )
-    allowed = "src/htop_tycoon/engine/rng.py"
     violations = [
         line for line in result.stdout.strip().splitlines()
-        if allowed not in line
+        if allowed_abs not in line
     ]
     assert violations == [], f"Bare random import found: {violations}"
