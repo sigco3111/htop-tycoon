@@ -1,0 +1,63 @@
+# htop-tycoon v3.0 — 5 platforms / consoles (spec §2.3, §2.8).
+# PC is permanent / free; consoles are licensed (royalty 0.15);
+# Own Console is permanent / self-published / requires HW Engineer.
+
+- id: pc
+  name_ko: PC
+  name_en: PC
+  license_needed: false
+  royalty: 0.0
+  release_year: 0
+  peak_year: 0
+  decline_rate: 0.0
+  discontinue_year: -1
+  base_popularity: 1.0
+  requires_hw_engineer: false
+
+- id: console_a
+  name_ko: 플박
+  name_en: PlayBox
+  license_needed: true
+  royalty: 0.15
+  release_year: 1
+  peak_year: 3
+  decline_rate: 0.15
+  discontinue_year: 8
+  base_popularity: 1.5
+  requires_hw_engineer: false
+
+- id: console_b
+  name_ko: 콘솔 B
+  name_en: Console B
+  license_needed: true
+  royalty: 0.15
+  release_year: 2
+  peak_year: 4
+  decline_rate: 0.10
+  discontinue_year: 10
+  base_popularity: 1.3
+  requires_hw_engineer: false
+
+- id: console_c
+  name_ko: 콘솔 C
+  name_en: Console C
+  license_needed: true
+  royalty: 0.15
+  release_year: 3
+  peak_year: 5
+  decline_rate: 0.20
+  discontinue_year: 7
+  base_popularity: 1.4
+  requires_hw_engineer: false
+
+- id: own_console
+  name_ko: 자사콘솔
+  name_en: Own Console
+  license_needed: false
+  royalty: 0.0
+  release_year: 0
+  peak_year: 0
+  decline_rate: 0.0
+  discontinue_year: -1
+  base_popularity: 2.0
+  requires_hw_engineer: true

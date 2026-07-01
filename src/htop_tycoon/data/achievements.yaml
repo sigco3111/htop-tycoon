@@ -1,0 +1,70 @@
+# htop-tycoon v3.0 — 7 Legacy Score achievements (spec §1.5, §9 #6).
+# Each unlock_condition is structured data the persistence layer can evaluate.
+
+- id: first_game_released
+  name_ko: 첫 출시
+  name_en: First Game Released
+  description_ko: 첫 게임을 출시했습니다.
+  description_en: Released your first game.
+  unlock_condition:
+    type: games_released
+    threshold: 1
+
+- id: mega_hit
+  name_ko: 대박
+  name_en: Mega Hit
+  description_ko: 단일 게임이 100만 장 이상 판매되었습니다.
+  description_en: A single game sold 1,000,000+ copies.
+  unlock_condition:
+    type: single_game_sales
+    threshold: 1000000
+
+- id: hall_of_fame
+  name_ko: 명예의 전당
+  name_en: Hall of Fame
+  description_ko: 5개 이상의 게임이 명예의 전당에 진입했습니다 (평균 평점 8.0+).
+  description_en: 5+ games entered the Hall of Fame (avg score 8.0+).
+  unlock_condition:
+    type: hall_of_fame_games
+    min_count: 5
+    min_avg_score: 8.0
+
+- id: secret_ending_unlocked
+  name_ko: 비밀 엔딩 해제
+  name_en: Secret Ending Unlocked
+  description_ko: 비밀 엔딩 조건을 달성했습니다.
+  description_en: Reached the Secret ending condition.
+  unlock_condition:
+    type: secret_ending_reached
+    requires_own_console: true
+    requires_mega_hit_on_own: true
+
+- id: own_console_released
+  name_ko: 자사 콘솔 출시
+  name_en: Own Console Released
+  description_ko: 자사 콘솔을 출시했습니다.
+  description_en: Released your own console.
+  unlock_condition:
+    type: own_console_released
+
+- id: ten_years_survived
+  name_ko: 10년 생존
+  name_en: 10 Years Survived
+  description_ko: 파산이나 매각 없이 10년을 버텼습니다.
+  description_en: Survived 10 years without bankruptcy or sale.
+  unlock_condition:
+    type: years_survived
+    threshold: 10
+
+- id: all_strategies_tried
+  name_ko: 4개 전략 정복
+  name_en: All 4 Strategies Tried
+  description_ko: 4가지 전략을 모두 사용해 봤습니다.
+  description_en: Tried all 4 Strategy Manager modes.
+  unlock_condition:
+    type: strategies_used
+    required:
+      - aggressive
+      - conservative
+      - balanced
+      - genre_focus
