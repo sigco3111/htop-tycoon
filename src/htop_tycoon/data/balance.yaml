@@ -94,6 +94,14 @@ save:
   atomic_write: true
   backup_count: 3
 
+quality:
+  # Axis-weight bonus formula (per level above 1, linear).
+  # The contribution at level L for any (job, axis) is
+  #   contribution_table[job][axis] * (1.0 + per_level_linear_bonus * (L - 1))
+  # so level 1 = 1.0x, level 2 = 1.2x, ..., level 5 = 1.8x.
+  # Spec §2.1 + §2.5 (skill scaling). Source for engine/quality_weight.py.
+  per_level_linear_bonus: 0.2
+
 ending:
   # Spec §1.4 + §9 success criteria.
   mega_hit_sales_threshold: 1000000

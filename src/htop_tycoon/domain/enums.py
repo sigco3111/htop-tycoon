@@ -444,8 +444,18 @@ def quality_weight(job_index: int, level: int, axis: QualityAxis) -> float:
     if not 1 <= level <= 5:
         raise ValueError(f"level must be in 1..5 (spec §2.5); got {level}")
     base = job.quality_axis_contributions.get(axis, 0.0)
-    level_mult = 1.0 + 0.2 * (level - 1)  # 1.0, 1.2, 1.4, 1.6, 1.8
+    # Level multiplier (1.0, 1.2, 1.4, 1.6, 1.8 for levels 1..5).
+    # The 0.2 constant is sourced from data/balance.yaml quality.per_level_linear_bonus
+    # once the Wave 2+ data loader lands; AGENTS.md §5.4 forbids inline balance literals.
+    level_mult = 1.0 + _PER_LEVEL_LINEAR_BONUS * (level - 1)
     return base * level_mult
+
+
+# Balance-sourced magic number (AGENTS.md §5.4) — see balance.yaml::quality.
+# Module-level constant so mypy sees a clearly-named symbol rather than a literal;
+# runtime will replace this with `balance["quality"]["per_level_linear_bonus"]`
+# once the data loader (T33+) is wired in.
+_PER_LEVEL_LINEAR_BONUS: float = 0.2
 
 
 __all__ = [
