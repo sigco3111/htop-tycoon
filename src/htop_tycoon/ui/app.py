@@ -17,7 +17,7 @@ from textual.containers import Vertical
 from textual.widgets import Static
 
 from htop_tycoon.domain import CompanyState
-from htop_tycoon.domain.enums import StrategyKind
+from htop_tycoon.domain.enums import Console, StrategyKind
 from htop_tycoon.domain.rng import GameRng
 from htop_tycoon.engine import (
     DEFAULT_MARKET,
@@ -28,14 +28,18 @@ from htop_tycoon.engine import (
     fire_employee,
     generate_candidates,
     hire_employee,
+    purchase_console,
     record_ending,
+    release_project,
     tick,
 )
 from htop_tycoon.persistence import SAVE_PATH, load_state, save_state
 from htop_tycoon.ui.mock_state import mock_state
+from htop_tycoon.ui.screens.console import ConsoleMarketScreen
 from htop_tycoon.ui.screens.ending import EndingScreen, LegacyPanel
 from htop_tycoon.ui.screens.fire import FireScreen
 from htop_tycoon.ui.screens.hire import HireScreen
+from htop_tycoon.ui.screens.release import ReleaseScreen
 from htop_tycoon.ui.screens.strategy_picker import StrategyPicker
 from htop_tycoon.ui.theme import HtopTycoonTheme
 from htop_tycoon.ui.widgets.footer import Footer as HtopFooter
@@ -84,6 +88,9 @@ class HtopTycoonApp(App[int]):
         Binding("7", "select_candidate('7')", "7.Cand", show=False),
         Binding("8", "select_candidate('8')", "8.Cand", show=False),
         Binding("9", "select_fire_target('9')", "9.Fire", show=False),
+        Binding("0", "select_release_target('0')", "0.Rel", show=False),
+        Binding("c", "open_console_market", "Console", show=True),
+        Binding("0", "buy_console('0')", "0.Cons", show=False),
         Binding("q", "quit", "Quit", show=True),
     ]
 
@@ -107,6 +114,9 @@ class HtopTycoonApp(App[int]):
         self._pending_strategy_picker: StrategyPicker | None = None
         self._pending_hire_screen: HireScreen | None = None
         self._pending_fire_screen: FireScreen | None = None
+        self._pending_release_screen: ReleaseScreen | None = None
+        self._pending_console_screen: ConsoleMarketScreen | None = None
+        self._pending_release_target: Console | None = None
 
     def compose(self) -> ComposeResult:
         yield HtopHeader(state=self._state)
@@ -252,5 +262,58 @@ class HtopTycoonApp(App[int]):
         self._state = fire_employee(self._state, target_id)
         self.notify(f"Fired: {emp_name}")
         self._pending_fire_screen = None
+        self._refresh_header()
+        self._refresh_widgets()
+
+    def action_open_release_screen(self) -> None:
+        self._pending_release_screen = ReleaseScreen(self._state)
+        if not self._pending_release_screen.projects:
+            self.notify("No shipped projects to release")
+
+    def action_select_release_target(self, idx_str: str) -> None:
+        if self._pending_release_screen is None:
+            return
+        project_id = self._pending_release_screen.select(int(idx_str))
+        if project_id is None:
+            self.notify("Invalid selection")
+            return
+        from htop_tycoon.engine.console_market import available_consoles
+
+        target = next(
+            (c for c in available_consoles() if c != self._state.own_console),
+            None,
+        )
+        if target is None:
+            self.notify("No available console to release on")
+            return
+        try:
+            self._state = release_project(
+                self._state, project_id, target, self._market, self._rng
+            )
+            self.notify(f"Released on {target.value}")
+        except ValueError as exc:
+            self.notify(f"Release failed: {exc}")
+            return
+        self._pending_release_screen = None
+        self._refresh_header()
+        self._refresh_widgets()
+
+    def action_open_console_market(self) -> None:
+        self._pending_console_screen = ConsoleMarketScreen(self._state)
+
+    def action_buy_console(self, idx_str: str) -> None:
+        if self._pending_console_screen is None:
+            return
+        console = self._pending_console_screen.select(int(idx_str))
+        if console is None:
+            self.notify("Invalid selection")
+            return
+        try:
+            self._state = purchase_console(self._state, console)
+            self.notify(f"Purchased: {console.value}")
+        except ValueError as exc:
+            self.notify(f"Purchase failed: {exc}")
+            return
+        self._pending_console_screen = None
         self._refresh_header()
         self._refresh_widgets()

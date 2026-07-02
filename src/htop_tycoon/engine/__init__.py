@@ -4,6 +4,12 @@ Phase 2B module. No UI imports, no module-level random access — all
 randomness flows through GameRng passed in by callers.
 """
 
+from htop_tycoon.engine.console_market import (
+    CONSOLE_PRICES,
+    available_consoles,
+    console_price,
+    purchase_console,
+)
 from htop_tycoon.engine.endings import (
     BANKRUPTCY_THRESHOLD_CENTS,
     ENDING_DESCRIPTIONS,
@@ -48,6 +54,7 @@ from htop_tycoon.engine.productivity import (
     MAX_TIER,
     compute_employee_productivity,
 )
+from htop_tycoon.engine.release import release_project, releaseable_projects
 from htop_tycoon.engine.sales import (
     BASE_UNITS_SOLD,
     PLATFORM_PRICE_CENTS,
@@ -124,4 +131,10 @@ __all__ = [
     "fire_employee",
     "generate_candidates",
     "CANDIDATE_NAMES",
+    "CONSOLE_PRICES",
+    "console_price",
+    "purchase_console",
+    "available_consoles",
+    "release_project",
+    "releaseable_projects",
 ]
