@@ -167,6 +167,8 @@ class HtopTycoonApp(App[int]):
             )
 
     def _advance_one_tick(self) -> None:
+        if self._is_modal_open():
+            return
         self._state = tick(self._state, self._rng, self._market)
         self._tick_count += 1
         ending = detect_ending(self._state)
