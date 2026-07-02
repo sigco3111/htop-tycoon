@@ -42,6 +42,7 @@ from htop_tycoon.ui.screens.hire import HireScreen
 from htop_tycoon.ui.screens.release import ReleaseScreen
 from htop_tycoon.ui.screens.strategy_picker import StrategyPicker
 from htop_tycoon.ui.theme import HtopTycoonTheme
+from htop_tycoon.ui.widgets.event_log import EventLogPanel
 from htop_tycoon.ui.widgets.footer import Footer as HtopFooter
 from htop_tycoon.ui.widgets.header import Header as HtopHeader
 from htop_tycoon.ui.widgets.metric_bar import MetricBar
@@ -123,6 +124,7 @@ class HtopTycoonApp(App[int]):
         with Vertical(id="body"):
             yield OrgTree(self._state)
             yield MetricBar(self._state)
+            yield Static(EventLogPanel(self._state).render())
             yield Static(LegacyPanel(self._state.legacy_scores).render())
         yield HtopFooter()
 
