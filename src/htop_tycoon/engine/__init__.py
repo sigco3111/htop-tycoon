@@ -4,6 +4,21 @@ Phase 2B module. No UI imports, no module-level random access — all
 randomness flows through GameRng passed in by callers.
 """
 
+from htop_tycoon.engine.endings import (
+    BANKRUPTCY_THRESHOLD_CENTS,
+    ENDING_DESCRIPTIONS,
+    ENDING_LABELS,
+    HALL_OF_FAME_REQUIRED,
+    HARD_ENDINGS,
+    MEGA_HIT_UNITS,
+    VOLUNTARY_SALE_MIN_CENTS,
+    Ending,
+    EndingKind,
+    LegacyScore,
+    construct_legacy_score,
+    detect_ending,
+    record_ending,
+)
 from htop_tycoon.engine.game_dev import (
     BASE_PROGRESS_PER_DAY,
     GENRE_FACTOR,
@@ -66,4 +81,17 @@ __all__ = [
     "FANS_PER_SHIPMENT_UNIT",
     "SATISFACTION_MIN",
     "SATISFACTION_MAX",
+    "EndingKind",
+    "Ending",
+    "LegacyScore",
+    "HARD_ENDINGS",
+    "ENDING_LABELS",
+    "ENDING_DESCRIPTIONS",
+    "BANKRUPTCY_THRESHOLD_CENTS",
+    "VOLUNTARY_SALE_MIN_CENTS",
+    "MEGA_HIT_UNITS",
+    "HALL_OF_FAME_REQUIRED",
+    "detect_ending",
+    "record_ending",
+    "construct_legacy_score",
 ]
