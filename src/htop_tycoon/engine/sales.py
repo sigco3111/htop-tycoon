@@ -24,18 +24,16 @@ JITTER_MAX: int = 110
 JITTER_DIVISOR: int = 100
 
 
-def compute_sales_revenue(
+def compute_units_sold(
     project: GameProject, market: MarketState, rng: GameRng
-) -> Money:
-    """Revenue from one shipment event.
-
-    Formula: base_units × popularity × (quality_sum/400) × trend × genre × jitter × price/unit.
+) -> int:
+    """Units sold from one shipment event (same formula as compute_sales_revenue
+    but returns the integer unit count without the price multiplier).
     """
-    price_cents = PLATFORM_PRICE_CENTS[project.platform]
     quality_factor = project.quality.sum() / QUALITY_MAX_SUM
     genre_factor = GENRE_FACTOR[project.genre]
     jitter = rng.int_range(JITTER_MIN, JITTER_MAX) / JITTER_DIVISOR
-    units_sold = (
+    units = (
         BASE_UNITS_SOLD
         * market.popularity
         * quality_factor
@@ -43,5 +41,16 @@ def compute_sales_revenue(
         * market.trend
         * jitter
     )
-    revenue_cents = int(units_sold * price_cents)
-    return Money(revenue_cents)
+    return int(units)
+
+
+def compute_sales_revenue(
+    project: GameProject, market: MarketState, rng: GameRng
+) -> Money:
+    """Revenue from one shipment event.
+
+    Formula: compute_units_sold() × price_per_unit.
+    """
+    price_cents = PLATFORM_PRICE_CENTS[project.platform]
+    units = compute_units_sold(project, market, rng)
+    return Money(units * price_cents)

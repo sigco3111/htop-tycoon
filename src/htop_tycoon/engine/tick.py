@@ -21,9 +21,14 @@ from htop_tycoon.domain.money import Money
 from htop_tycoon.domain.project import GameProject
 from htop_tycoon.domain.rng import GameRng
 from htop_tycoon.domain.state import CompanyState
+from htop_tycoon.engine.endings import (
+    MEGA_HIT_UNITS,
+    detect_ending,
+    record_ending,
+)
 from htop_tycoon.engine.game_dev import advance_projects
 from htop_tycoon.engine.market import MarketState
-from htop_tycoon.engine.sales import compute_sales_revenue
+from htop_tycoon.engine.sales import compute_sales_revenue, compute_units_sold
 
 SATISFACTION_DRIFT_MIN: int = -1
 SATISFACTION_DRIFT_MAX: int = 1
@@ -79,29 +84,59 @@ def _pay_salaries(state: CompanyState) -> CompanyState:
 def _ship_projects(
     state: CompanyState, rng: GameRng, market: MarketState
 ) -> CompanyState:
-    """For every project that just shipped THIS tick, add revenue + fans."""
+    """For every project that just shipped THIS tick, add revenue + fans.
+
+    Detects "just shipped" projects via units_sold == 0 (only newly-shipped
+    projects have units_sold=0; shipped-this-tick projects get their units
+    computed fresh, then their counters bumped). Pre-shipped projects
+    (units_sold > 0) keep their final counters.
+    """
     new_state = state
     revenue_total = 0
     fans_total = 0
-    for _pid, project in state.projects.items():
+    shipped_ids: list[ProjectId] = []
+    for pid, project in state.projects.items():
         if not project.is_shipped:
             continue
-        # Was it ALREADY shipped before this tick? Skip — only count NEW shipments.
-        # For Phase 2B, every is_shipped project ships once; tests/projects must
-        # be tracked via a 'shipped_at' field to be precise. For now, only ship
-        # projects that JUST became shipped this tick by comparing previous day's
-        # project snapshot via `state.projects`.
-        # Simpler heuristic: any is_shipped project — ship once. Callers reset
-        # the project after each tick by removing it (engine does NOT manage
-        # project lifecycle in Phase 2B; that's Phase 2C+).
+        if project.units_sold > 0:
+            continue
+        units = compute_units_sold(project, market, rng)
         revenue = compute_sales_revenue(project, market, rng)
         revenue_total += revenue.cents
         fans_total += max(0, project.quality.sum() // FANS_PER_SHIPMENT_UNIT)
+        new_project = dataclasses.replace(project, units_sold=units)
+        new_state = _with_project(new_state, pid, new_project)
+        shipped_ids.append(pid)
     if revenue_total > 0:
         new_state = new_state.adjust_cash(Money(revenue_total))
     if fans_total > 0:
         new_state = new_state.add_fans(fans_total)
+    for pid in shipped_ids:
+        new_state = new_state.increment_games_shipped()
+        if new_state.projects[pid].units_sold >= MEGA_HIT_UNITS:
+            new_state = new_state.increment_mega_hits()
     return new_state
+
+
+def _update_counters_and_legacy(state: CompanyState) -> CompanyState:
+    """Recount games_shipped + mega_hits from projects (idempotent re-derivation).
+
+    Used to handle pre-shipped projects (units_sold > 0) that need counters
+    bumped without re-running revenue calc.
+    """
+    games_shipped = sum(1 for p in state.projects.values() if p.units_sold > 0)
+    mega_hits = sum(1 for p in state.projects.values() if p.units_sold >= MEGA_HIT_UNITS)
+    new_state = dataclasses.replace(
+        state, games_shipped=games_shipped, mega_hits=mega_hits
+    )
+    return new_state
+
+
+def _record_legacy_after_tick(state: CompanyState) -> CompanyState:
+    ending = detect_ending(state)
+    if ending is None:
+        return state
+    return record_ending(state, ending)
 
 
 def tick(
@@ -112,19 +147,12 @@ def tick(
     """Advance one game day. Returns new CompanyState; input untouched."""
     active_market = market if market is not None else DEFAULT_MARKET
 
-    # 1. Pay salaries.
     new_state = _pay_salaries(state)
-
-    # 2. Drift satisfaction (rng-driven).
     new_state = _drift_satisfaction_for_all(new_state, rng)
-
-    # 3. Advance projects.
     new_state = advance_projects(new_state, rng)
-
-    # 4. Ship revenue for any is_shipped project.
     new_state = _ship_projects(new_state, rng, active_market)
-
-    # 5. Roll the day counter.
+    new_state = _update_counters_and_legacy(new_state)
+    new_state = _record_legacy_after_tick(new_state)
     new_state = new_state.advance_day()
 
     return new_state
