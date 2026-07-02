@@ -49,6 +49,7 @@ class CompanyState:
     voluntary_sale_pending: bool = False
     legacy_scores: tuple[LegacyScore, ...] = ()
     focus_genre: Genre | None = None
+    event_log: tuple[object, ...] = ()  # tuple[Event, ...] — avoid runtime circular import
 
     def __post_init__(self) -> None:
         if not isinstance(self.year, int) or self.year < MIN_YEAR:
@@ -147,3 +148,7 @@ class CompanyState:
 
     def set_focus_genre(self, genre: Genre | None) -> CompanyState:
         return dataclasses.replace(self, focus_genre=genre)
+
+    def append_event(self, event: object) -> CompanyState:
+        new_log: tuple[object, ...] = (*self.event_log, event)
+        return dataclasses.replace(self, event_log=new_log)

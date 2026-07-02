@@ -25,6 +25,7 @@ from htop_tycoon.engine.endings import (
     detect_ending,
     record_ending,
 )
+from htop_tycoon.engine.event_log import Event, EventKind
 from htop_tycoon.engine.game_dev import (
     BASE_PROGRESS_PER_DAY,
     GENRE_FACTOR,
@@ -118,6 +119,8 @@ __all__ = [
     "detect_ending",
     "record_ending",
     "construct_legacy_score",
+    "Event",
+    "EventKind",
     "Strategy",
     "StrategyDecision",
     "STRATEGY_REGISTRY",

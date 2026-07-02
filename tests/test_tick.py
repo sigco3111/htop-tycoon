@@ -140,7 +140,7 @@ def test_tick_determinism_seed_42_10_ticks() -> None:
         f"prog={new_state.projects[ProjectId(1)].progress.value} "
         f"days_in_dev={new_state.projects[ProjectId(1)].days_in_dev}"
     )
-    expected = "day=10 cash=9000000 fans=0 sat1=90 sat2=50 prog=20 days_in_dev=10"
+    expected = "day=10 cash=7752000 fans=0 sat1=90 sat2=50 prog=20 days_in_dev=10"
     assert snapshot == expected, f"Snapshot drift.\nGot:      {snapshot}\nExpected: {expected}"
 
 

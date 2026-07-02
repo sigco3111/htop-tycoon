@@ -26,9 +26,12 @@ from htop_tycoon.engine.endings import (
     detect_ending,
     record_ending,
 )
+from htop_tycoon.engine.event_log import Event, EventKind
 from htop_tycoon.engine.game_dev import advance_projects
+from htop_tycoon.engine.hr import fire_employee, generate_candidates, hire_employee
 from htop_tycoon.engine.market import MarketState
 from htop_tycoon.engine.sales import compute_sales_revenue, compute_units_sold
+from htop_tycoon.engine.strategy.dispatch import current_strategy
 
 SATISFACTION_DRIFT_MIN: int = -1
 SATISFACTION_DRIFT_MAX: int = 1
@@ -139,6 +142,58 @@ def _record_legacy_after_tick(state: CompanyState) -> CompanyState:
     return record_ending(state, ending)
 
 
+def _apply_strategy_decisions(
+    state: CompanyState, rng: GameRng
+) -> CompanyState:
+    """Apply the active strategy's decisions to state.
+
+    Phase 2K auto-application: fire zombie is applied (Conservative),
+    hire is applied (uses generate_candidates), start_project is logged
+    but not auto-applied (project creation needs user-driven seed).
+    Other decisions (save_cash, boost/increase_funding) are recorded
+    in event_log for UI inspection.
+    """
+    new_state = state
+    try:
+        strategy = current_strategy(state)
+    except Exception:
+        return new_state
+    decisions = strategy.decide(new_state, rng)
+    for d in decisions:
+        event = Event(
+            day_index=new_state.day_index,
+            year=new_state.year,
+            kind=_decision_to_event_kind(d.action),
+            description=f"{d.action} {d.target} (magnitude={d.magnitude}): {d.reason}",
+        )
+        new_state = new_state.append_event(event)
+        if d.action == "fire" and d.target == "zombie":
+            zombies = [
+                eid for eid, e in new_state.employees.items() if e.is_zombie
+            ]
+            if zombies:
+                new_state = fire_employee(new_state, zombies[0])
+        elif d.action == "hire":
+            candidates = generate_candidates(
+                rng, count=1, used_names={e.name for e in new_state.employees.values()}
+            )
+            if candidates and d.magnitude > 0:
+                new_state = hire_employee(new_state, candidates[0])
+    return new_state
+
+
+def _decision_to_event_kind(action: str) -> EventKind:
+    mapping = {
+        "hire": EventKind.HIRE,
+        "fire": EventKind.FIRE,
+        "start_project": EventKind.START_PROJECT,
+        "save_cash": EventKind.SAVE_CASH,
+        "boost_funding": EventKind.BOOST_FUNDING,
+        "increase_funding": EventKind.INCREASE_FUNDING,
+    }
+    return mapping.get(action, EventKind.HIRE)
+
+
 def tick(
     state: CompanyState,
     rng: GameRng,
@@ -153,6 +208,7 @@ def tick(
     new_state = _ship_projects(new_state, rng, active_market)
     new_state = _update_counters_and_legacy(new_state)
     new_state = _record_legacy_after_tick(new_state)
+    new_state = _apply_strategy_decisions(new_state, rng)
     new_state = new_state.advance_day()
 
     return new_state
