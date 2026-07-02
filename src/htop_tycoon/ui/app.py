@@ -1,12 +1,14 @@
 """HtopTycoonApp — root Textual application.
 
-Phase 2E: engine tick wired via Textual interval timer. Key bindings
-0/1/2/3/4 set speed (0 = paused), p toggles pause, q quits. State is
-injected (defaults to mock_state); rng defaults to seeded GameRng.
+Phase 2F: engine tick + speed control + save/load. Key bindings
+0/1/2/3/4 set speed (0 = paused), p toggles pause, q quits,
+f2 saves, f9 loads. State is injected (defaults to mock_state);
+rng defaults to seeded GameRng.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from textual.app import App, ComposeResult
@@ -16,6 +18,7 @@ from textual.containers import Vertical
 from htop_tycoon.domain import CompanyState
 from htop_tycoon.domain.rng import GameRng
 from htop_tycoon.engine import DEFAULT_MARKET, MarketState, tick
+from htop_tycoon.persistence import SAVE_PATH, load_state, save_state
 from htop_tycoon.ui.mock_state import mock_state
 from htop_tycoon.ui.theme import HtopTycoonTheme
 from htop_tycoon.ui.widgets.footer import Footer as HtopFooter
@@ -30,11 +33,12 @@ if TYPE_CHECKING:
 class HtopTycoonApp(App[int]):
     """Root app for the htop-tycoon v3.0 TUI.
 
-    Phase 2E surfaces:
+    Phase 2F surfaces:
     - Terminal-green theme registered + selected.
     - Header / OrgTree / MetricBar / Footer mounted, driven by state.
     - Timer advances state by one day per interval (speed-dependent).
-    - BINDINGS for speed control (0/1/2/3/4), pause toggle (p), quit (q).
+    - BINDINGS for speed (0/1/2/3/4), pause toggle (p), save (f2),
+      load (f9), quit (q).
     """
 
     TITLE: str = "htop-tycoon v3.0"
@@ -47,6 +51,8 @@ class HtopTycoonApp(App[int]):
         Binding("3", "set_speed(3)", "3x", show=True),
         Binding("4", "set_speed(4)", "4x headless", show=True),
         Binding("p", "toggle_pause", "Pause toggle", show=True),
+        Binding("f2", "save_game", "Save", show=True),
+        Binding("f9", "load_game", "Load", show=True),
         Binding("q", "quit", "Quit", show=True),
     ]
 
@@ -55,6 +61,7 @@ class HtopTycoonApp(App[int]):
         state: CompanyState | None = None,
         rng: GameRng | None = None,
         market: MarketState | None = None,
+        save_path: Path | None = None,
     ) -> None:
         super().__init__()
         self.register_theme(HtopTycoonTheme())
@@ -62,6 +69,7 @@ class HtopTycoonApp(App[int]):
         self._state: CompanyState = state if state is not None else mock_state()
         self._rng: GameRng = rng if rng is not None else GameRng(self._state.rng_seed)
         self._market: MarketState = market if market is not None else DEFAULT_MARKET
+        self._save_path: Path = save_path if save_path is not None else SAVE_PATH
         self._tick_interval: Interval | None = None
         self._tick_count: int = 0
 
@@ -121,3 +129,23 @@ class HtopTycoonApp(App[int]):
     def action_toggle_pause(self) -> None:
         new_speed = 0 if self._state.speed > 0 else 1
         self.action_set_speed(new_speed)
+
+    def action_save_game(self) -> None:
+        try:
+            save_state(self._state, self._save_path)
+            self.notify(f"Saved: {self._save_path}")
+        except OSError as exc:
+            self.notify(f"Save failed: {exc}")
+
+    def action_load_game(self) -> None:
+        try:
+            self._state = load_state(self._save_path)
+        except FileNotFoundError:
+            self.notify("No save file")
+            return
+        except OSError as exc:
+            self.notify(f"Load failed: {exc}")
+            return
+        self._refresh_header()
+        self._refresh_widgets()
+        self.notify("Loaded")
