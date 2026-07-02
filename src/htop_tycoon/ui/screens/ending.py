@@ -1,14 +1,11 @@
-"""EndingScreen (modal) + LegacyPanel (body widget) — Phase 2G.
-
-EndingScreen is shown when a HARD ending fires (BANKRUPTCY, VOLUNTARY_SALE).
-It pauses the timer and offers New Game / Quit actions.
-
-LegacyPanel is mounted in the body and renders the all-time list of
-soft endings (MEGA_HIT, HALL_OF_FAME, SECRET, plus historical BANKRUPTCY
-+ VOLUNTARY_SALE rows).
-"""
+"""EndingScreen (modal) + LegacyPanel (body widget) — Korean localization."""
 
 from __future__ import annotations
+
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.screen import ModalScreen
+from textual.widgets import Static
 
 from htop_tycoon.domain.money import Money
 from htop_tycoon.engine.endings import (
@@ -18,6 +15,7 @@ from htop_tycoon.engine.endings import (
     EndingKind,
     LegacyScore,
 )
+from htop_tycoon.ui.i18n import ENDING_KO
 
 __all__ = [
     "EndingScreen",
@@ -27,21 +25,18 @@ __all__ = [
 ]
 
 
-def _format_legacy_line(score: LegacyScore) -> str:
+def render_legacy_line(score: LegacyScore) -> str:
     cash = Money(score.ending_cash_cents)
+    kind_ko = ENDING_KO.get(score.ending_kind.value, score.ending_kind.value)
     return (
-        f"{score.ending_kind.value} · Year {score.ending_year} · "
-        f"Cash {cash} · Fans {score.total_fans:,} · "
-        f"Games {score.games_shipped} · Mega {score.mega_hits}"
+        f"{kind_ko} · {score.ending_year}년차 · "
+        f"자금 {cash} · 팬 {score.total_fans:,}명 · "
+        f"출시 {score.games_shipped}개 · 메가히트 {score.mega_hits}개"
     )
 
 
 class LegacyPanel:
-    """Body widget showing all-time legacy scores.
-
-    Pure data holder — render() returns the multi-line string used by
-    App. App.mount()'s LegacyPanel under the #body Vertical.
-    """
+    """Body widget showing all-time legacy scores (not a modal)."""
 
     __slots__ = ("_scores",)
 
@@ -54,24 +49,56 @@ class LegacyPanel:
 
     def render(self) -> str:
         if not self._scores:
-            return "Legacy (no endings yet)"
-        lines = [f"Legacy ({len(self._scores)})"]
+            return "레거시 (아직 엔딩 없음)"
+        lines = [f"레거시 ({len(self._scores)})"]
         for score in self._scores:
-            lines.append(f"  {_format_legacy_line(score)}")
+            lines.append(f"  {render_legacy_line(score)}")
         return "\n".join(lines)
 
 
-class EndingScreen:
-    """Modal data describing an ending. App.push_screen wraps this.
+def render_ending_text(ending: Ending, legacy: LegacyScore) -> str:
+    """Pure function returning EndingScreen body Korean text."""
+    label = ENDING_KO.get(ending.kind.value, ending.kind.value)
+    cash = Money(legacy.ending_cash_cents)
+    return (
+        f"=== {label} ===\n"
+        f"{legacy.ending_year}년차\n"
+        f"자금: {cash}\n"
+        f"팬: {legacy.total_fans:,}명\n"
+        f"출시 게임: {legacy.games_shipped}개\n"
+        f"메가히트: {legacy.mega_hits}개\n"
+        f"\n{ending.description}\n"
+        f"\n[새 게임]    [종료]"
+    )
 
-    In Phase 2G we keep the modal as a pure-data holder and let the
-    App.render it via its own screen. Full Textual ModalScreen subclass
-    with BINDINGS arrives in a follow-up phase.
+
+class EndingScreen(ModalScreen[None]):
+    """엔딩 모달. Esc로 닫기."""
+
+    BINDINGS = [
+        Binding("escape", "app.pop_screen", "닫기"),
+        Binding("0", "app.digit('0')", "정지"),
+        Binding("1", "app.digit('1')", "1x"),
+        Binding("2", "app.digit('2')", "2x"),
+        Binding("3", "app.digit('3')", "3x"),
+        Binding("4", "app.digit('4')", "4x"),
+    ]
+
+    DEFAULT_CSS = """
+    EndingScreen {
+        align: center middle;
+    }
+    #ending-content {
+        width: 70;
+        height: auto;
+        padding: 1 2;
+        border: round $primary;
+        background: $surface;
+    }
     """
 
-    __slots__ = ("_ending", "_legacy")
-
     def __init__(self, ending: Ending, legacy: LegacyScore) -> None:
+        super().__init__()
         self._ending = ending
         self._legacy = legacy
 
@@ -83,22 +110,14 @@ class EndingScreen:
     def legacy(self) -> LegacyScore:
         return self._legacy
 
-    def render(self) -> str:
-        label = ENDING_LABELS.get(self._ending.kind, self._ending.kind.value)
-        cash = Money(self._legacy.ending_cash_cents)
-        return (
-            f"=== {label} ===\n"
-            f"Year {self._legacy.ending_year}\n"
-            f"Cash: {cash}\n"
-            f"Fans: {self._legacy.total_fans:,}\n"
-            f"Games Shipped: {self._legacy.games_shipped}\n"
-            f"Mega Hits: {self._legacy.mega_hits}\n"
-            f"\n{self._ending.description}\n"
-            f"\n[New Game]    [Quit]"
+    def compose(self) -> ComposeResult:
+        yield Static(
+            render_ending_text(self._ending, self._legacy),
+            id="ending-content",
         )
 
 
-# Re-export for convenience
 ENDING_KIND_LABELS = ENDING_LABELS
 ENDING_KIND_DESCRIPTIONS = ENDING_DESCRIPTIONS
 ENDING_VALUES: tuple[str, ...] = tuple(k.value for k in EndingKind)
+

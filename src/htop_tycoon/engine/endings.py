@@ -35,12 +35,28 @@ ENDING_LABELS: dict[EndingKind, str] = {
     EndingKind.SECRET: "Secret Ending",
 }
 
+ENDING_LABELS_KO: dict[EndingKind, str] = {
+    EndingKind.BANKRUPTCY: "파산",
+    EndingKind.VOLUNTARY_SALE: "자발적 매각",
+    EndingKind.MEGA_HIT: "대박",
+    EndingKind.HALL_OF_FAME: "명예의 전당",
+    EndingKind.SECRET: "비밀 엔딩",
+}
+
 ENDING_DESCRIPTIONS: dict[EndingKind, str] = {
     EndingKind.BANKRUPTCY: "Your company went bankrupt.",
     EndingKind.VOLUNTARY_SALE: "You sold the studio on your own terms.",
     EndingKind.MEGA_HIT: "One of your games sold over 1 million copies!",
     EndingKind.HALL_OF_FAME: "Five or more games entered the Hall of Fame.",
     EndingKind.SECRET: "Your console launched a million-seller title.",
+}
+
+ENDING_DESCRIPTIONS_KO: dict[EndingKind, str] = {
+    EndingKind.BANKRUPTCY: "회사가 파산했습니다.",
+    EndingKind.VOLUNTARY_SALE: "스튜디오를 자발적으로 매각했습니다.",
+    EndingKind.MEGA_HIT: "단일 게임이 100만 장 이상 판매되었습니다!",
+    EndingKind.HALL_OF_FAME: "5개 이상의 게임이 명예의 전당에 입성했습니다.",
+    EndingKind.SECRET: "자사 콘솔에서 100만 판매를 달성했습니다!",
 }
 
 BANKRUPTCY_THRESHOLD_CENTS: int = -50_000_00

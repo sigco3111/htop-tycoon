@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
+from textual.screen import ModalScreen
 from textual.widgets import Static
 
 from htop_tycoon.domain import CompanyState
@@ -38,8 +39,12 @@ from htop_tycoon.ui.mock_state import mock_state
 from htop_tycoon.ui.screens.console import ConsoleMarketScreen
 from htop_tycoon.ui.screens.ending import EndingScreen, LegacyPanel
 from htop_tycoon.ui.screens.fire import FireScreen
+from htop_tycoon.ui.screens.help import HelpScreen
 from htop_tycoon.ui.screens.hire import HireScreen
+from htop_tycoon.ui.screens.new_project import NewProjectScreen
+from htop_tycoon.ui.screens.promote import PromoteScreen
 from htop_tycoon.ui.screens.release import ReleaseScreen
+from htop_tycoon.ui.screens.search import SearchScreen
 from htop_tycoon.ui.screens.strategy_picker import StrategyPicker
 from htop_tycoon.ui.theme import HtopTycoonTheme
 from htop_tycoon.ui.widgets.event_log import EventLogPanel
@@ -68,31 +73,28 @@ class HtopTycoonApp(App[int]):
     SUB_TITLE: str = "Kairosoft Game Dev Story — htop edition"
 
     BINDINGS = [
-        Binding("0", "set_speed(0)", "Pause", show=True),
-        Binding("1", "set_speed(1)", "1x", show=True),
-        Binding("2", "set_speed(2)", "2x", show=True),
-        Binding("3", "set_speed(3)", "3x", show=True),
-        Binding("4", "set_speed(4)", "4x headless", show=True),
-        Binding("p", "toggle_pause", "Pause toggle", show=True),
-        Binding("f2", "save_game", "Save", show=True),
-        Binding("f9", "load_game", "Load", show=True),
-        Binding("f10", "request_sell", "Sell studio", show=True),
-        Binding("s", "open_strategy_picker", "Strategy", show=True),
-        Binding("1", "select_strategy('AGGRESSIVE')", "1.Aggr", show=False),
-        Binding("2", "select_strategy('CONSERVATIVE')", "2.Cons", show=False),
-        Binding("3", "select_strategy('BALANCED')", "3.Bal", show=False),
-        Binding("4", "select_strategy('GENRE_FOCUS')", "4.Focus", show=False),
-        Binding("h", "open_hire_screen", "Hire", show=True),
-        Binding("x", "open_fire_screen", "Fire", show=True),
-        Binding("5", "select_candidate('5')", "5.Cand", show=False),
-        Binding("6", "select_candidate('6')", "6.Cand", show=False),
-        Binding("7", "select_candidate('7')", "7.Cand", show=False),
-        Binding("8", "select_candidate('8')", "8.Cand", show=False),
-        Binding("9", "select_fire_target('9')", "9.Fire", show=False),
-        Binding("0", "select_release_target('0')", "0.Rel", show=False),
-        Binding("c", "open_console_market", "Console", show=True),
-        Binding("0", "buy_console('0')", "0.Cons", show=False),
-        Binding("q", "quit", "Quit", show=True),
+        Binding("0", "route_digit('0')", "정지", show=True),
+        Binding("1", "route_digit('1')", "1x", show=True),
+        Binding("2", "route_digit('2')", "2x", show=True),
+        Binding("3", "route_digit('3')", "3x", show=True),
+        Binding("4", "route_digit('4')", "4x", show=True),
+        Binding("p", "toggle_pause", "일시정지", show=True),
+        Binding("f1", "show_help", "도움말", show=True),
+        Binding("f2", "save_game", "저장", show=True),
+        Binding("f3", "search_employee", "검색", show=True),
+        Binding("f5", "toggle_tree", "트리", show=True),
+        Binding("f7", "promote_employee", "승진", show=True),
+        Binding("f8", "load_game", "로드", show=True),
+        Binding("f9", "open_fire_screen", "해고", show=True),
+        Binding("f10", "request_sell", "매각", show=True),
+        Binding("s", "open_strategy_picker", "전략", show=True),
+        Binding("h", "open_hire_screen", "고용", show=True),
+        Binding("x", "open_fire_screen", "해고", show=True),
+        Binding("c", "open_console_market", "콘솔", show=True),
+        Binding("n", "new_project", "새게임", show=True),
+        Binding("d", "toggle_auto", "자동", show=True),
+        Binding("space", "tag_employee", "태그", show=True),
+        Binding("q", "quit", "종료", show=True),
     ]
 
     def __init__(
@@ -118,6 +120,11 @@ class HtopTycoonApp(App[int]):
         self._pending_release_screen: ReleaseScreen | None = None
         self._pending_console_screen: ConsoleMarketScreen | None = None
         self._pending_release_target: Console | None = None
+        self._pending_help_screen: HelpScreen | None = None
+        self._pending_search_screen: SearchScreen | None = None
+        self._pending_promote_screen: PromoteScreen | None = None
+        self._pending_new_project_screen: NewProjectScreen | None = None
+        self._tree_expanded: bool = True
 
     def compose(self) -> ComposeResult:
         yield HtopHeader(state=self._state)
@@ -126,7 +133,7 @@ class HtopTycoonApp(App[int]):
             yield MetricBar(self._state)
             yield Static(EventLogPanel(self._state).render())
             yield Static(LegacyPanel(self._state.legacy_scores).render())
-        yield HtopFooter()
+        yield HtopFooter(state=self._state)
 
     def _refresh_header(self) -> None:
         old = self.query(HtopHeader)
@@ -167,7 +174,8 @@ class HtopTycoonApp(App[int]):
             self._state = self._state.set_speed(0)
             self._state = record_ending(self._state, ending)
             legacy = construct_legacy_score(self._state, ending)
-            self._pending_ending_screen = EndingScreen(ending, legacy)
+            modal = EndingScreen(ending, legacy)
+            self._open_pending("_pending_ending_screen", modal)
             self._restart_timer()
         self._refresh_header()
         self._refresh_widgets()
@@ -178,11 +186,41 @@ class HtopTycoonApp(App[int]):
         body.mount(OrgTree(self._state))
         body.mount(MetricBar(self._state))
         body.mount(Static(LegacyPanel(self._state.legacy_scores).render()))
+        self._refresh_footer()
+
+    def _refresh_footer(self) -> None:
+        try:
+            footer = self.query_one(HtopFooter)
+            footer.update_status(self._state)
+        except Exception:
+            pass
 
     def action_set_speed(self, speed: int) -> None:
         self._state = self._state.set_speed(speed)
         self._restart_timer()
-        self._refresh_widgets()
+        self._refresh_footer()
+
+    def _open_pending(self, attr: str, modal: ModalScreen[None]) -> None:
+        """Push modal screen onto stack and keep _pending_<x>_screen alias in sync.
+
+        The dismiss callback clears the alias if it's still pointing at this modal.
+        """
+        setattr(self, attr, modal)
+
+        def _on_dismiss(_result: object = None) -> None:
+            if getattr(self, attr, None) is modal:
+                setattr(self, attr, None)
+
+        self.push_screen(modal, callback=_on_dismiss)
+
+    def _close_modal(self) -> None:
+        """Pop the top modal screen if any."""
+        if len(self.screen_stack) > 1:
+            self.pop_screen()
+
+    def action_digit(self, key: str) -> None:
+        """Forward a digit key from a ModalScreen to the router."""
+        self.action_route_digit(key)
 
     def action_toggle_pause(self) -> None:
         new_speed = 0 if self._state.speed > 0 else 1
@@ -191,93 +229,102 @@ class HtopTycoonApp(App[int]):
     def action_save_game(self) -> None:
         try:
             save_state(self._state, self._save_path)
-            self.notify(f"Saved: {self._save_path}")
+            self.notify(f"저장됨: {self._save_path}")
         except OSError as exc:
-            self.notify(f"Save failed: {exc}")
+            self.notify(f"저장 실패: {exc}")
 
     def action_load_game(self) -> None:
         try:
             self._state = load_state(self._save_path)
         except FileNotFoundError:
-            self.notify("No save file")
+            self.notify("저장 파일이 없습니다")
             return
         except OSError as exc:
-            self.notify(f"Load failed: {exc}")
+            self.notify(f"로드 실패: {exc}")
             return
         self._refresh_header()
         self._refresh_widgets()
-        self.notify("Loaded")
+        self.notify("로드됨")
 
     def action_request_sell(self) -> None:
         self._state = self._state.set_voluntary_sale_pending(True)
-        self.notify("Sell request queued — fires next tick if cash ≥ $200,000")
+        self.notify("매각 요청 대기열 추가 — 다음 tick에 현금 ≥ $200,000이면 발동")
         self._refresh_widgets()
 
     def action_open_strategy_picker(self) -> None:
-        self._pending_strategy_picker = StrategyPicker(self._state.strategy)
+        modal = StrategyPicker(self._state.strategy)
+        self._open_pending("_pending_strategy_picker", modal)
         self.notify(
-            f"Strategy picker (current: {self._state.strategy.value}). Press 1-4 to change."
+            f"전략 선택 (현재: {self._state.strategy.value}). 1-4 키로 변경."
         )
 
     def action_select_strategy(self, kind_str: str) -> None:
         kind = StrategyKind(kind_str)
         self._state = self._state.set_strategy(kind)
-        self.notify(f"Strategy: {kind.value}")
+        self._pending_strategy_picker = None
+        self.notify(f"전략: {kind.value}")
         self._refresh_header()
         self._refresh_widgets()
+        self._close_modal()
 
     def action_open_hire_screen(self) -> None:
         used = {e.name for e in self._state.employees.values()}
-        self._pending_hire_screen = HireScreen(
+        modal = HireScreen(
             generate_candidates(self._rng, count=5, used_names=used)
         )
-        self.notify(f"Hire: {len(self._pending_hire_screen.candidates)} candidates")
+        self._open_pending("_pending_hire_screen", modal)
+        self.notify(f"고용: 후보 {len(modal.candidates)}명")
 
     def action_select_candidate(self, idx_str: str) -> None:
         if self._pending_hire_screen is None:
             return
         candidate = self._pending_hire_screen.select(int(idx_str))
         if candidate is None:
-            self.notify("Invalid selection")
+            self.notify("잘못된 선택")
             return
         self._state = hire_employee(self._state, candidate)
-        self.notify(f"Hired: {candidate.name} ({candidate.job.value} L{candidate.suggested_level})")
+        self.notify(f"고용됨: {candidate.name} ({candidate.job.value} L{candidate.suggested_level})")
         self._pending_hire_screen = None
         self._refresh_header()
         self._refresh_widgets()
+        self._close_modal()
 
     def action_open_fire_screen(self) -> None:
         if not self._state.employees:
-            self.notify("No employees to fire")
+            self.notify("해고할 직원이 없습니다")
             return
-        self._pending_fire_screen = FireScreen(self._state)
-        self.notify("Fire: pick employee to terminate")
+        modal = FireScreen(self._state)
+        self._open_pending("_pending_fire_screen", modal)
+        self.notify("해고: 직원을 선택하세요 (1-N)")
 
     def action_select_fire_target(self, idx_str: str) -> None:
         if self._pending_fire_screen is None:
             return
         target_id = self._pending_fire_screen.select(int(idx_str))
         if target_id is None:
-            self.notify("Invalid selection")
+            self.notify("잘못된 선택")
             return
         emp_name = self._state.employees[target_id].name
         self._state = fire_employee(self._state, target_id)
-        self.notify(f"Fired: {emp_name}")
         self._pending_fire_screen = None
+        self.notify(f"해고: {emp_name}")
         self._refresh_header()
         self._refresh_widgets()
+        self._close_modal()
 
     def action_open_release_screen(self) -> None:
-        self._pending_release_screen = ReleaseScreen(self._state)
-        if not self._pending_release_screen.projects:
-            self.notify("No shipped projects to release")
+        modal = ReleaseScreen(self._state)
+        if not modal.projects:
+            self.notify("출시 가능한 프로젝트가 없습니다")
+            return
+        self._open_pending("_pending_release_screen", modal)
 
     def action_select_release_target(self, idx_str: str) -> None:
         if self._pending_release_screen is None:
             return
         project_id = self._pending_release_screen.select(int(idx_str))
         if project_id is None:
-            self.notify("Invalid selection")
+            self.notify("잘못된 선택")
             return
         from htop_tycoon.engine.console_market import available_consoles
 
@@ -286,36 +333,150 @@ class HtopTycoonApp(App[int]):
             None,
         )
         if target is None:
-            self.notify("No available console to release on")
+            self.notify("출시 가능한 콘솔이 없습니다")
             return
         try:
             self._state = release_project(
                 self._state, project_id, target, self._market, self._rng
             )
-            self.notify(f"Released on {target.value}")
+            self.notify(f"출시 완료: {target.value}")
         except ValueError as exc:
-            self.notify(f"Release failed: {exc}")
+            self.notify(f"출시 실패: {exc}")
             return
         self._pending_release_screen = None
         self._refresh_header()
         self._refresh_widgets()
+        self._close_modal()
 
     def action_open_console_market(self) -> None:
-        self._pending_console_screen = ConsoleMarketScreen(self._state)
+        modal = ConsoleMarketScreen(self._state)
+        self._open_pending("_pending_console_screen", modal)
 
     def action_buy_console(self, idx_str: str) -> None:
         if self._pending_console_screen is None:
             return
         console = self._pending_console_screen.select(int(idx_str))
         if console is None:
-            self.notify("Invalid selection")
+            self.notify("잘못된 선택")
             return
         try:
             self._state = purchase_console(self._state, console)
-            self.notify(f"Purchased: {console.value}")
+            self.notify(f"구매 완료: {console.value}")
         except ValueError as exc:
-            self.notify(f"Purchase failed: {exc}")
+            self.notify(f"구매 실패: {exc}")
             return
         self._pending_console_screen = None
         self._refresh_header()
         self._refresh_widgets()
+        self._close_modal()
+
+    def action_route_digit(self, key: str) -> None:
+        if self._pending_strategy_picker is not None:
+            mapping = {
+                "1": "AGGRESSIVE",
+                "2": "CONSERVATIVE",
+                "3": "BALANCED",
+                "4": "GENRE_FOCUS",
+            }
+            if key in mapping:
+                self.action_select_strategy(mapping[key])
+            return
+        if self._pending_hire_screen is not None:
+            self.action_select_candidate(key)
+            return
+        if self._pending_fire_screen is not None:
+            self.action_select_fire_target(key)
+            return
+        if self._pending_release_screen is not None:
+            self.action_select_release_target(key)
+            return
+        if self._pending_console_screen is not None:
+            self.action_buy_console(key)
+            return
+        if key in {"1", "2", "3", "4"}:
+            self.action_set_speed(int(key))
+        elif key == "0":
+            self.action_set_speed(0)
+
+    def action_show_help(self) -> None:
+        modal = HelpScreen()
+        self._open_pending("_pending_help_screen", modal)
+        self.notify("도움말 — Esc로 닫기")
+
+    def action_search_employee(self, query: str = "") -> None:
+        if query:
+            matches = [
+                e.name for e in self._state.employees.values()
+                if query.lower() in e.name.lower()
+            ]
+            if not matches:
+                self.notify("검색 결과 없음")
+                return
+            modal = SearchScreen(query=query, candidates=matches)
+            self._open_pending("_pending_search_screen", modal)
+            self.notify(f"검색 결과: {', '.join(matches)}")
+            return
+        names = sorted(e.name for e in self._state.employees.values())
+        if not names:
+            self.notify("직원이 없습니다")
+            return
+        modal = SearchScreen(query="", candidates=names)
+        self._open_pending("_pending_search_screen", modal)
+
+    def action_toggle_tree(self) -> None:
+        self._tree_expanded = not self._tree_expanded
+        self.notify(f"트리: {'펼침' if self._tree_expanded else '접기'}")
+        self._refresh_widgets()
+
+    def action_promote_employee(self) -> None:
+        modal = PromoteScreen(self._state)
+        self._open_pending("_pending_promote_screen", modal)
+        self.notify("승진 대상 선택 (LEAD, 만족도 70%+ 만 가능)")
+
+    def action_new_project(self) -> None:
+        from htop_tycoon.domain import (
+            GameProject,
+            GameTitle,
+            Platform,
+            Progress,
+            ProjectId,
+            QualityAxes,
+        )
+        from htop_tycoon.domain.enums import Genre
+        self._pending_new_project_screen = NewProjectScreen()
+        if self._state.projects:
+            self.notify("이미 진행 중인 프로젝트가 있습니다")
+            return
+        lead = next(
+            (e for e in self._state.employees.values() if e.job.value == "LEAD"),
+            None,
+        )
+        if lead is None:
+            self.notify("리드 직원이 없어 프로젝트를 시작할 수 없습니다")
+            return
+        next_id = max((int(p) for p in self._state.projects.keys()), default=0) + 1
+        new_proj = GameProject(
+            id=ProjectId(next_id),
+            title=GameTitle("New Game"),
+            genre=Genre.RPG,
+            platform=Platform.PC,
+            console=None,
+            progress=Progress(0),
+            quality=QualityAxes(50, 50, 50, 50),
+            days_in_dev=0,
+            lead_id=lead.id,
+            team_ids=(lead.id,),
+        )
+        self._state = self._state.add_project(new_proj)
+        modal = NewProjectScreen()
+        self._open_pending("_pending_new_project_screen", modal)
+        self.notify("새 프로젝트 시작: New Game")
+        self._refresh_widgets()
+
+    def action_toggle_auto(self) -> None:
+        self._state = self._state.toggle_auto()
+        self.notify(f"자동: {'ON' if self._state.auto_on else 'OFF'}")
+        self._refresh_footer()
+
+    def action_tag_employee(self) -> None:
+        self.notify("태그 기능 곧 출시")

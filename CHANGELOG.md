@@ -2,6 +2,35 @@
 
 All notable changes to htop-tycoon are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.0.1] - 2026-07-02
+
+### Fixed
+- **BINDINGS 키 충돌**: 동일 키(`1`/`2`/`3`/`4`/`0`)가 4-5개 액션에 중복 바인딩되어 마지막 것만 동작하던 문제 해결. `action_route_digit` 단일 라우터 도입으로 모달 컨텍스트 자동 분기.
+- **F9 키 매핑 수정**: `F9=Load` → `F9=해고`로 사용자 의도대로 변경. `F8=Load`로 이동.
+- **"s 전략" → 밸런스만 선택됨** 문제: `1`/`2`/`4` 키 충돌로 동작 안 하던 것 수정. 모달 컨텍스트 라우터로 4종 전략 모두 정상 선택.
+- **Speed 단축키**: `1`/`2`/`3`/`4` 키가 다른 액션에 가로채이던 문제 해결. 모달 없을 때 속도 변경, 모달 있을 때 모달 선택.
+- **Auto 모드 단축키**: `d` 키로 Auto ON/OFF 토글.
+- **n 새 게임 프로젝트 단축키**: `n` 키로 새 프로젝트 시작 (장르 모달).
+- **Space 직원 태그**: placeholder notify.
+
+### Added
+- `F1` 도움말 화면 (HelpScreen): 모든 키바인딩 + 전략 + 엔딩을 한 화면에 표시.
+- `F3` 검색 화면 (SearchScreen): 직원 이름으로 부분 매칭 검색.
+- `F5` 트리 토글: OrgTree 펼침/접기 상태 표시.
+- `F7` 승진 화면 (PromoteScreen): LEAD 직원 만족도 순으로 승진 가능 여부 표시.
+- `i18n` 모듈: `ko_label`, `ko_money`, `BINDINGS_KO`, `JOB_KO`, `DEPT_KO`, `GENRE_KO`, `STRATEGY_KO`, `ENDING_KO`, `METRIC_KO`, `EVENT_KIND_KO`, `NOTIFY_KO` 등 통합 한글 사전.
+
+### Changed
+- **전체 UI 한글화**: Header / Footer / OrgTree / MetricBar / EventLog / 모든 모달 화면이 한글로 표시.
+- **Footer 동적 속도 표시**: `MOCK_SPEED_LABEL`/`MOCK_AUTO_LABEL` 제거.
+- **Engine 한영 공존**: `ENDING_LABELS`/`ENDING_DESCRIPTIONS` (영문) + `ENDING_KO`/`ENDING_DESCRIPTIONS_KO` (한글) 모두 보존. Strategy 클래스에 `name_ko`/`description_ko` 추가.
+- **모든 notify 메시지 한글화**: "Saved:" → "저장됨:", "Hired:" → "고용됨:", "Fired:" → "해고:" 등.
+- **버전 3.0.0 → 3.0.1**: 버그 수정 + 한글화. 테스트 327개 → 437개.
+
+### Tests
+- 신규 4개 테스트 파일: `tests/ui/test_i18n.py` (49 tests), `tests/pilot/test_bindings_router.py` (21 tests), `tests/pilot/test_new_actions.py` (7 tests), `tests/pilot/test_new_screens.py` (14 tests).
+- 기존 테스트 업데이트: 한글 표시에 맞게 assertions 수정 (`Year 1` → `1년차`, `LEAD` → `리드`, `ZOMBIE` → `좀비` 등).
+
 ## [3.0.0] - 2026-07-02
 
 ### Added (v3.0 from scratch)

@@ -27,8 +27,16 @@ class AggressiveStrategy(Strategy):
         return "Aggressive"
 
     @property
+    def name_ko(self) -> str:
+        return "공격적"
+
+    @property
     def description(self) -> str:
         return "Hire fast, big projects, take risks"
+
+    @property
+    def description_ko(self) -> str:
+        return "공격적 고용, 큰 프로젝트, 위험 감수"
 
     def decide(
         self, state: CompanyState, rng: GameRng
@@ -88,8 +96,16 @@ class ConservativeStrategy(Strategy):
         return "Conservative"
 
     @property
+    def name_ko(self) -> str:
+        return "보수적"
+
+    @property
     def description(self) -> str:
         return "Slow & steady; cut losses when cash is low"
+
+    @property
+    def description_ko(self) -> str:
+        return "신중, 현금 부족시 정리, 현금 비축"
 
     def decide(
         self, state: CompanyState, rng: GameRng
@@ -144,8 +160,16 @@ class BalancedStrategy(Strategy):
         return "Balanced"
 
     @property
+    def name_ko(self) -> str:
+        return "균형"
+
+    @property
     def description(self) -> str:
         return "Moderate hiring, mixed project sizes"
+
+    @property
+    def description_ko(self) -> str:
+        return "중간 규모 채용, 다양한 장르 혼합"
 
     def decide(
         self, state: CompanyState, rng: GameRng
@@ -197,8 +221,16 @@ class GenreFocusStrategy(Strategy):
         return "Genre Focus"
 
     @property
+    def name_ko(self) -> str:
+        return "장르 집중"
+
+    @property
     def description(self) -> str:
         return f"Concentrate resources on {self.focus_genre.value}"
+
+    @property
+    def description_ko(self) -> str:
+        return f"{self.focus_genre.value} 장르에 집중"
 
     def decide(
         self, state: CompanyState, rng: GameRng

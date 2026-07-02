@@ -1,4 +1,4 @@
-# htop-tycoon v3.0
+# htop-tycoon v3.0.1
 
 > **카이로소프트 「게임개발 스토리」 의 htop 스타일 TUI 포팅 + Strategy Manager 자동 위임.**
 
@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](pyproject.toml)
-[![Tests: 327](https://img.shields.io/badge/tests-327-green.svg)](tests/)
+[![Tests: 437](https://img.shields.io/badge/tests-437-green.svg)](tests/)
 
 ---
 
@@ -54,40 +54,41 @@ uv run python -m htop_tycoon
 #   --headless         run without TUI (placeholder for future headless QA)
 ```
 
-## 키 바인딩 (Key Bindings) — v3.0
+## 키 바인딩 (Key Bindings) — v3.0.1
 
 | Key | 동작 (Action) | English |
 |---|---|---|
-| `F1` / `h` | 도움말 | Help (planned) |
-| `F2` / `S` | 저장 (YAML) | Save game |
-| `F3` / `/` | 직원 검색 | Search employee (planned) |
-| `F4` / `\` | 필터 | Filter (planned) |
-| `F5` / `t` | 부서 트리 토글 | Toggle dept tree |
-| `F6` / `<` `>` | 정렬 사이클 | Sort cycle |
-| `F7` | 직원 승진 | Promote (planned) |
-| `F8` | 직원 감봉 | Demote (planned) |
-| `F9` | **로드 (YAML)** | **Load game** |
-| `F10` / `q` | **자발적 매각 / 종료** | **Voluntary sale / Quit** |
+| `F1` | **도움말** | **Help** |
+| `F2` | **저장 (YAML)** | **Save game** |
+| `F3` | **직원 검색** | **Search employee** |
+| `F4` | 필터 (planned) | Filter (planned) |
+| `F5` | **부서 트리 토글** | **Toggle dept tree** |
+| `F6` / `<` `>` | 정렬 사이클 (planned) | Sort cycle (planned) |
+| `F7` | **직원 승진** | **Promote** |
+| `F8` | **로드 (YAML)** | **Load game** |
+| `F9` | **직원 해고 (zombie 우선)** | **Fire (zombies first)** |
+| `F10` | **자발적 매각** | **Voluntary sale** |
+| `Q` | 종료 | Quit |
 | `H` | **신규 직원 고용** | **Hire (5 candidates)** |
-| `X` | **직원 해고 (zombie 우선)** | **Fire (zombies first)** |
+| `X` | **직원 해고 (legacy)** | **Fire (legacy alias for F9)** |
 | `S` | **전략 선택 모달** | **Strategy picker** |
-| `1`-`5` | **전략 / 후보 / 콘솔 선택** | **Pick strategy/candidate/console** |
-| `N` | 새 게임 프로젝트 시작 | New game project (planned) |
-| `G` | 프로젝트 진척 보기 | View game project progress (planned) |
+| `N` | **새 게임 프로젝트 시작** | **New game project** |
+| `G` | 프로젝트 진척 보기 (planned) | View game project progress (planned) |
 | `R` | **프로젝트 출시 (콘솔 선택)** | **Release on console** |
 | `C` | **콘솔 마켓 (구매)** | **Console market (buy)** |
-| `D` | Auto 모드 토글 | Toggle Auto Manager (planned) |
-| `A` | 시상식 | Awards (planned) |
-| `Space` | 직원 태그 | Tag employee (planned) |
+| `D` | **Auto 모드 토글** | **Toggle Auto Manager** |
+| `A` | 시상식 (planned) | Awards (planned) |
+| `Space` | **직원 태그 (placeholder)** | **Tag employee (placeholder)** |
 | `Enter` | 선택 | Select |
 | `Esc` | 모달 닫기 | Close modal |
-| `P` | 일시정지 | Pause |
-| `0` | 정지 | Stop time |
-| `1` / `2` / `3` | 속도 1x / 2x / 3x | Speed 1x / 2x / 3x |
-| `4` | 속도 4x (헤드리스 QA) | Speed 4x (headless QA) |
-| `Q` | 종료 | Quit |
+| `P` | 일시정지 토글 | Pause toggle |
+| `0` | 속도 0 (정지) | Speed 0 (pause) |
+| `1`-`4` | 속도 1x / 2x / 3x / 4x | Speed 1x / 2x / 3x / 4x |
+| `1`-`N` (모달 컨텍스트) | 전략/후보/콘솔 선택 | Pick strategy/candidate/console |
 
 Speed: `1x` = 1 real-second = 1 game-day (default). `0` pauses time. `4` is reserved for headless QA (the user-facing cap is 3x).
+
+**모달 컨텍스트 라우팅**: 숫자 키(`1`–`4`)는 모달이 열려있지 않으면 속도 변경, 모달이 열려있으면 모달 선택(전략/후보/콘솔)으로 자동 라우팅됩니다. 모달 컨텍스트가 우선입니다.
 
 ## 전략 (Strategies) — v3.0
 

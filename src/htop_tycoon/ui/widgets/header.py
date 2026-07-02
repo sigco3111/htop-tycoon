@@ -1,9 +1,4 @@
-"""Header — top htop-style status bar.
-
-Phase 2C: accepts an optional CompanyState. When None, renders the
-Phase 1 mock data (Year 1, Cash $100,000, etc.). When provided, renders
-live values from the state.
-"""
+"""Header — top htop-style status bar."""
 
 from __future__ import annotations
 
@@ -14,11 +9,12 @@ from textual.containers import Horizontal
 from textual.widgets import Static
 
 from htop_tycoon.domain import CompanyState
+from htop_tycoon.ui.i18n import STRATEGY_KO
 
-MOCK_YEAR: str = "Year 1"
-MOCK_CASH: str = "Cash $100,000"
-MOCK_FANS: str = "Fans 0"
-MOCK_STRATEGY: str = "Strategy: Balanced"
+MOCK_YEAR: str = "1년차"
+MOCK_CASH: str = "자금 $100,000"
+MOCK_FANS: str = "팬 0명"
+MOCK_STRATEGY: str = "전략: 균형"
 
 
 class Header(Horizontal):
@@ -49,10 +45,11 @@ class Header(Horizontal):
             yield Static(MOCK_FANS, id="hdr-fans")
             yield Static(MOCK_STRATEGY, id="hdr-strategy")
         else:
-            yield Static(f"Year {self._state.year}", id="hdr-year")
-            yield Static(f"Cash {self._state.cash}", id="hdr-cash")
-            yield Static(f"Fans {self._state.fans}", id="hdr-fans")
+            yield Static(f"{self._state.year}년차", id="hdr-year")
+            yield Static(f"자금 {self._state.cash}", id="hdr-cash")
+            yield Static(f"팬 {self._state.fans:,}명", id="hdr-fans")
             yield Static(
-                f"Strategy: {self._state.strategy.value.title()}",
+                f"전략: {STRATEGY_KO.get(self._state.strategy.value, self._state.strategy.value)}",
                 id="hdr-strategy",
             )
+

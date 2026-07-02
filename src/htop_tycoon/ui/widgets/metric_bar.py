@@ -1,9 +1,4 @@
-"""MetricBar widget — htop-style 4-axis quality bars for active project.
-
-Phase 2D. Reads the active GameProject (lowest progress) from injected
-CompanyState and renders 4 horizontal ASCII bars: FUN, GRAPHICS,
-SOUND, ORIGINAL. Each bar uses unicode block chars (█ filled, ░ empty).
-"""
+"""MetricBar widget — htop-style 4-axis quality bars for active project."""
 
 from __future__ import annotations
 
@@ -20,13 +15,13 @@ EMPTY_CHAR: str = "░"
 DEFAULT_BAR_WIDTH: int = 10
 
 AXIS_LABELS: tuple[tuple[str, str], ...] = (
-    ("FUN", "metric-fun"),
-    ("GRAPHICS", "metric-graphics"),
-    ("SOUND", "metric-sound"),
-    ("ORIGINAL", "metric-original"),
+    ("재미", "metric-fun"),
+    ("그래픽", "metric-graphics"),
+    ("사운드", "metric-sound"),
+    ("독창성", "metric-originality"),
 )
 
-EMPTY_PROJECT_LABEL: str = "(no active project)"
+EMPTY_PROJECT_LABEL: str = "(진행 중 프로젝트 없음)"
 
 
 def bar(value: int, width: int = DEFAULT_BAR_WIDTH) -> str:
@@ -81,3 +76,4 @@ class MetricBar(Vertical):
         )
         for (label, _widget_id), value in zip(AXIS_LABELS, values, strict=True):
             yield Static(_format_axis(label, value))
+

@@ -1,22 +1,67 @@
-"""FireScreen modal data — shows current employees sorted by lowest satisfaction."""
+"""FireScreen modal — shows current employees sorted by lowest satisfaction."""
 
 from __future__ import annotations
 
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.screen import ModalScreen
+from textual.widgets import Static
+
 from htop_tycoon.domain import CompanyState, Employee, EmployeeId
+from htop_tycoon.ui.i18n import JOB_KO
 
 
-class FireScreen:
-    """Modal data holder listing employees to fire.
+def render_fire_text(ordered: list[Employee], max_visible: int = 9) -> str:
+    """Pure function returning FireScreen body Korean text."""
+    visible = ordered[:max_visible]
+    lines = [f"해고 (1-{len(visible)} 선택, 만족도 낮은 순)", ""]
+    for idx, e in enumerate(visible, start=1):
+        zombie = " [좀비]" if e.is_zombie else ""
+        job_ko = JOB_KO.get(e.job.value, e.job.value)
+        lines.append(
+            f"{idx}. {e.name:<10} {job_ko:<14} L{e.level:<2} "
+            f"만족도:{e.satisfaction}%{zombie}"
+        )
+    lines.append("")
+    lines.append(f"1-{len(visible)} 키로 해고, 'x' 또는 F9로 닫기.")
+    return "\n".join(lines)
 
-    Sorted by satisfaction ascending (zombies first), then by id.
-    select(idx) returns the picked EmployeeId or None if idx out of range.
+
+class FireScreen(ModalScreen[None]):
+    """해고 모달. Esc로 닫기."""
+
+    BINDINGS = [
+        Binding("escape", "app.pop_screen", "닫기"),
+        Binding("0", "app.digit('0')", "정지"),
+        Binding("1", "app.digit('1')", "1"),
+        Binding("2", "app.digit('2')", "2"),
+        Binding("3", "app.digit('3')", "3"),
+        Binding("4", "app.digit('4')", "4"),
+        Binding("5", "app.digit('5')", "5"),
+        Binding("6", "app.digit('6')", "6"),
+        Binding("7", "app.digit('7')", "7"),
+        Binding("8", "app.digit('8')", "8"),
+        Binding("9", "app.digit('9')", "9"),
+    ]
+
+    DEFAULT_CSS = """
+    FireScreen {
+        align: center middle;
+    }
+    #fire-content {
+        width: 70;
+        height: auto;
+        padding: 1 2;
+        border: round $primary;
+        background: $surface;
+    }
     """
-
-    __slots__ = ("_ordered",)
 
     MAX_VISIBLE: int = 9
 
     def __init__(self, state: CompanyState) -> None:
+        super().__init__()
+        self._state = state
         self._ordered: list[Employee] = sorted(
             state.employees.values(),
             key=lambda e: (e.satisfaction, int(e.id)),
@@ -26,22 +71,14 @@ class FireScreen:
     def ordered(self) -> list[Employee]:
         return self._ordered
 
-    def render(self) -> str:
-        visible = self._ordered[: self.MAX_VISIBLE]
-        lines = [f"Fire (pick 1-{len(visible)}, lowest sat first)", ""]
-        for idx, e in enumerate(visible, start=1):
-            zombie = " [ZOMBIE]" if e.is_zombie else ""
-            lines.append(
-                f"{idx}. {e.name:<10} {e.job.value:<14} L{e.level:<2} "
-                f"sat:{e.satisfaction}%{zombie}"
-            )
-        lines.append("")
-        lines.append(
-            f"Press 1-{len(visible)} to fire, 'x' to close."
+    def compose(self) -> ComposeResult:
+        yield Static(
+            render_fire_text(self._ordered, self.MAX_VISIBLE),
+            id="fire-content",
         )
-        return "\n".join(lines)
 
     def select(self, idx: int) -> EmployeeId | None:
         if 1 <= idx <= min(len(self._ordered), self.MAX_VISIBLE):
             return self._ordered[idx - 1].id
         return None
+
