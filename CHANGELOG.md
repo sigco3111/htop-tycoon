@@ -2,6 +2,40 @@
 
 All notable changes to htop-tycoon are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [3.1] - 2026-07-03 — Watcher Mode
+
+**핵심 컨셉**: 게임 시작 시 모든 결정이 AI에게 자동 위임됨. 사용자는 **순수 옵저버**(observer)가 되어 화면을 보면서 메트릭을 감상.
+
+### Added
+- **메타 전략 선택기** (`src/htop_tycoon/engine/strategy/meta_strategy.py`): 매 tick마다 게임 상태(현금/직원수/프로젝트/좀비)를 보고 최적의 전략 자동 선택. 우선순위 캐스케이드:
+  1. cash < 0 OR (cash < $20k AND 좀비 존재) → **CONSERVATIVE**
+  2. cash ≥ $100k AND 직원 < 5 → **AGGRESSIVE**
+  3. focus_genre 설정 + 진행 중 focus 프로젝트 없음 → **GENRE_FOCUS**
+  4. cash ≥ $100k AND 직원 ≥ 7 → **GENRE_FOCUS**
+  5. 그 외 → **BALANCED**
+- **자동 실행 엔진** (`src/htop_tycoon/engine/auto.py`): 한 tick 안에서 모든 AI 결정을 자동 실행:
+  - 전략 자동 변경
+  - 자동 채용 (strategy가 hire 결정 시 가장 강한 후보)
+  - 자동 해고 (cash < $20k + 좀비 우선)
+  - 자동 출시 (출시 가능 프로젝트 → 가장 저렴한 콘솔)
+  - 자동 콘솔 구매 (cash ≥ $80k + 미보유)
+  - 자동 자발적 매각 (mega_hit ≥ 1 + cash ≥ $200k)
+- **CLI 기본값**: `__main__.py`에서 `state.auto_on=True`로 시작 (v3.0.1에서는 `False`였음).
+
+### Changed
+- `engine/tick.py`: `state.auto_on`이 `True`이면 `_apply_strategy_decisions` 대신 `auto_execute` 호출.
+- `ui/app.py`: 모든 `action_open_*` 메서드(전략/고용/해고/출시/콘솔/매각/새프로젝트)가 `auto_on=True`일 때 모달을 열지 않고 "자동 모드 — AI가 ...을 처리합니다" notify만 표시.
+
+### 동작 방식
+- 시작 시 자동으로 AI가 메타 전략을 선택하고, 직원 채용, 콘솔 구매 등을 알아서 진행.
+- `d` 키로 수동 모드 토글 가능 (`auto_on=False`로 전환).
+- 수동 모드에서는 기존과 같이 모달이 뜨고 사람이 직접 결정.
+- 다시 `d` 누르면 자동 모드로 복귀.
+
+### Tests
+- 신규: `tests/test_meta_strategy.py` (7개), `tests/test_auto_execute.py` (10개), `tests/test_auto_tick_dispatch.py` (3개), `tests/pilot/test_auto_mode.py` (7개), `tests/test_main_auto_default.py` (4개) — 총 +31개.
+- **468 tests pass** (437 + 31).
+
 ## [3.0.1] - 2026-07-02
 
 ### Fixed

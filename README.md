@@ -1,12 +1,12 @@
-# htop-tycoon v3.0.1
+# htop-tycoon v3.1 — Watcher Mode
 
-> **카이로소프트 「게임개발 스토리」 의 htop 스타일 TUI 포팅 + Strategy Manager 자동 위임.**
+> **카이로소프트 「게임개발 스토리」 의 htop 스타일 TUI 포팅 + Strategy Manager 완전 자동 위임.**
 
-> A TUI port of Kairosoft's **Game Dev Story**, styled to look like htop, with an automated **Strategy Manager** that runs the company while you watch the metrics.
+> A TUI port of Kairosoft's **Game Dev Story**, styled to look like htop. **All decisions (strategy, hire, fire, release, console buy, voluntary sale) are auto-delegated to the AI by default**. You are the CEO watching the metrics; the AI runs the company.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](pyproject.toml)
-[![Tests: 437](https://img.shields.io/badge/tests-437-green.svg)](tests/)
+[![Tests: 468](https://img.shields.io/badge/tests-468-green.svg)](tests/)
 
 ---
 
