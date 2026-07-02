@@ -174,7 +174,7 @@ def _coerce_state(raw: dict[str, Any]) -> CompanyState:
         proj = _coerce_project(proj_raw)
         state = state.add_project(proj)
     for score_raw in raw.get("legacy_scores", []):
-        from htop_tycoon.engine.endings import EndingKind, LegacyScore
+        from htop_tycoon.engine.endings import LegacyScore
 
         state = state.append_legacy_score(
             LegacyScore(

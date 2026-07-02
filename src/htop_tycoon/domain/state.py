@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from htop_tycoon.domain.employee import Employee
-from htop_tycoon.domain.enums import Console, StrategyKind
+from htop_tycoon.domain.enums import Console, Genre, StrategyKind
 from htop_tycoon.domain.ids import EmployeeId, ProjectId
 from htop_tycoon.domain.money import Money
 from htop_tycoon.domain.project import GameProject
@@ -48,6 +48,7 @@ class CompanyState:
     own_console: Console | None = None
     voluntary_sale_pending: bool = False
     legacy_scores: tuple[LegacyScore, ...] = ()
+    focus_genre: Genre | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.year, int) or self.year < MIN_YEAR:
@@ -143,3 +144,6 @@ class CompanyState:
     def append_legacy_score(self, score: LegacyScore) -> CompanyState:
         new_scores: tuple[LegacyScore, ...] = (*self.legacy_scores, score)
         return dataclasses.replace(self, legacy_scores=new_scores)
+
+    def set_focus_genre(self, genre: Genre | None) -> CompanyState:
+        return dataclasses.replace(self, focus_genre=genre)

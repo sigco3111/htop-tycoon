@@ -47,6 +47,16 @@ from htop_tycoon.engine.sales import (
     QUALITY_MAX_SUM,
     compute_sales_revenue,
 )
+from htop_tycoon.engine.strategy import (
+    STRATEGY_REGISTRY,
+    AggressiveStrategy,
+    BalancedStrategy,
+    ConservativeStrategy,
+    GenreFocusStrategy,
+    Strategy,
+    current_strategy,
+)
+from htop_tycoon.engine.strategy.types import StrategyDecision
 from htop_tycoon.engine.tick import (
     DEFAULT_MARKET,
     FANS_PER_SHIPMENT_UNIT,
@@ -94,4 +104,12 @@ __all__ = [
     "detect_ending",
     "record_ending",
     "construct_legacy_score",
+    "Strategy",
+    "StrategyDecision",
+    "STRATEGY_REGISTRY",
+    "AggressiveStrategy",
+    "ConservativeStrategy",
+    "BalancedStrategy",
+    "GenreFocusStrategy",
+    "current_strategy",
 ]
