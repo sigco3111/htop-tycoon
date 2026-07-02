@@ -21,9 +21,9 @@ EXPECTED_EMPLOYEE_NAMES: tuple[str, ...] = (
 )
 
 EXPECTED_DEPT_LABELS: tuple[str, ...] = (
-    "DEV",
-    "ART",
-    "SOUND",
+    "개발",
+    "아트",
+    "사운드",
     "QA",
 )
 
@@ -33,28 +33,29 @@ EXPECTED_FOOTER_LABELS: tuple[str, ...] = (
     "F3검색",
     "F5트리",
     "F7승진",
+    "F8로드",
     "F9해고",
     "H고용",
     "n새게임",
     "s전략",
     "d자동",
-    "Speed 1x",
-    "Auto OFF",
+    "속도 정지",
+    "자동 OFF",
 )
 
 EXPECTED_HEADER_LABELS: tuple[str, ...] = (
-    "Year 1",
-    "Cash $100,000",
-    "Fans 0",
-    "Strategy: Balanced",
+    "1년차",
+    "자금 $100,000",
+    "팬 0명",
+    "전략: 균형",
 )
 
 ALL_EXPECTED_STRINGS: tuple[str, ...] = (
     *EXPECTED_HEADER_LABELS,
     *EXPECTED_EMPLOYEE_NAMES,
     *EXPECTED_DEPT_LABELS,
-    "LEAD",
-    "[Z]",
+    "리드",
+    "[좀비]",
     "$",
     *EXPECTED_FOOTER_LABELS,
 )

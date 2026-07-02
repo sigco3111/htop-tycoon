@@ -5,8 +5,8 @@ from __future__ import annotations
 from htop_tycoon.engine.endings import Ending, EndingKind, LegacyScore
 from htop_tycoon.ui.screens.ending import (
     ENDING_LABELS,
-    EndingScreen,
     LegacyPanel,
+    render_ending_text,
 )
 
 SCREENSHOT_DIR: str = "docs/screenshots"
@@ -28,16 +28,15 @@ def test_ending_screen_renders_ending_summary() -> None:
         games_shipped=4,
         mega_hits=1,
     )
-    screen = EndingScreen(ending, legacy)
-    text = screen.render()
-    assert "Bankruptcy" in text
-    assert "Year 3" in text
+    text = render_ending_text(ending, legacy)
+    assert "파산" in text
+    assert "3년차" in text
     assert "-$55,000" in text
-    assert "Fans: 120" in text
-    assert "Games Shipped: 4" in text
-    assert "Mega Hits: 1" in text
-    assert "[New Game]" in text
-    assert "[Quit]" in text
+    assert "팬: 120" in text
+    assert "출시 게임: 4" in text
+    assert "메가히트: 1" in text
+    assert "[새 게임]" in text
+    assert "[종료]" in text
 
 
 def test_legacy_panel_renders_score_list() -> None:
@@ -59,25 +58,20 @@ def test_legacy_panel_renders_score_list() -> None:
     )
     panel = LegacyPanel([legacy1, legacy2])
     text = panel.render()
-    assert "Legacy (2)" in text
-    assert "BANKRUPTCY" in text
-    assert "MEGA_HIT" in text
-    assert "Year 2" in text
-    assert "Year 5" in text
+    assert "레거시 (2)" in text
+    assert "파산" in text
+    assert "대박" in text
+    assert "2년차" in text
+    assert "5년차" in text
 
 
 def test_legacy_panel_empty_state() -> None:
     panel = LegacyPanel(())
     text = panel.render()
-    assert "no endings yet" in text
+    assert "아직 엔딩 없음" in text
 
 
 def test_legacy_panel_rendered_as_static_when_app_has_legacy_scores() -> None:
-    """When the App has legacy scores in state, the body should show them.
-
-    The App integration lives in Phase 2G T8 — here we just verify the
-    render() output is suitable for SVG grep.
-    """
     legacy = LegacyScore(
         ending_kind=EndingKind.MEGA_HIT,
         ending_year=5,
@@ -88,9 +82,9 @@ def test_legacy_panel_rendered_as_static_when_app_has_legacy_scores() -> None:
     )
     panel = LegacyPanel([legacy])
     text = panel.render()
-    assert "Legacy (1)" in text
-    assert "MEGA_HIT" in text
-    assert "Year 5" in text
+    assert "레거시 (1)" in text
+    assert "대박" in text
+    assert "5년차" in text
 
 
 def test_ending_kind_labels_complete() -> None:

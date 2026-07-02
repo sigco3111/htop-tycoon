@@ -24,10 +24,10 @@ from pathlib import Path
 from htop_tycoon.ui.app import HtopTycoonApp
 
 EXPECTED_HEADER_LABELS: tuple[str, ...] = (
-    "Year 1",
-    "Cash $100,000",
-    "Fans 0",
-    "Strategy: Balanced",
+    "1년차",
+    "자금 $100,000",
+    "팬 0명",
+    "전략: 균형",
 )
 
 EXPECTED_FOOTER_F_KEYS: tuple[str, ...] = (
@@ -36,6 +36,7 @@ EXPECTED_FOOTER_F_KEYS: tuple[str, ...] = (
     "F3검색",
     "F5트리",
     "F7승진",
+    "F8로드",
     "F9해고",
 )
 
@@ -47,8 +48,8 @@ EXPECTED_FOOTER_SECONDARY: tuple[str, ...] = (
 )
 
 EXPECTED_FOOTER_STATUS: tuple[str, ...] = (
-    "Speed 1x",
-    "Auto OFF",
+    "속도 정지",
+    "자동 OFF",
 )
 
 ALL_EXPECTED_STRINGS: tuple[str, ...] = (

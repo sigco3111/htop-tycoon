@@ -14,7 +14,8 @@ from htop_tycoon.ui.widgets.event_log import EventLogPanel
 def test_event_log_empty_state() -> None:
     panel = EventLogPanel(CompanyState())
     text = panel.render()
-    assert "no events" in text
+    assert "이벤트 로그" in text
+    assert "아직 이벤트 없음" in text
 
 
 def test_event_log_renders_recent_events() -> None:
@@ -24,7 +25,7 @@ def test_event_log_renders_recent_events() -> None:
     new_state = tick(state, GameRng(0))
     panel = EventLogPanel(new_state)
     text = panel.render()
-    assert "Event Log" in text
+    assert "이벤트 로그" in text
 
 
 def test_event_log_max_visible_caps_at_5() -> None:
@@ -65,7 +66,7 @@ def test_event_log_app_mounts_widget() -> None:
                 for w in app.screen.walk_children()
                 if w.__class__.__name__ == "Static"
             ]
-            assert any("Event Log" in c for c in contents), (
+            assert any("이벤트 로그" in c for c in contents), (
                 f"EventLogPanel not mounted. Contents: {contents}"
             )
 

@@ -64,7 +64,7 @@ async def test_save_then_load_restores_snapshot(tmp_path: Path) -> None:
     svg_file = Path(svg_path)
     assert svg_file.exists()
     content = _normalize_svg(svg_file.read_text(encoding="utf-8"))
-    assert f"Year {app._state.year}" in content
+    assert f"{app._state.year}년차" in content
 
 
 async def test_load_without_save_notifies(tmp_path: Path) -> None:

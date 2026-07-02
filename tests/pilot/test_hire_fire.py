@@ -15,8 +15,8 @@ from htop_tycoon.domain.rng import GameRng
 from htop_tycoon.engine import generate_candidates
 from htop_tycoon.ui.app import HtopTycoonApp
 from htop_tycoon.ui.mock_state import mock_state
-from htop_tycoon.ui.screens.fire import FireScreen
-from htop_tycoon.ui.screens.hire import HireScreen
+from htop_tycoon.ui.screens.fire import FireScreen, render_fire_text
+from htop_tycoon.ui.screens.hire import HireScreen, render_hire_text
 
 
 def _zombie() -> Employee:
@@ -33,8 +33,7 @@ def _zombie() -> Employee:
 
 def test_hire_screen_renders_all_candidates() -> None:
     candidates = generate_candidates(GameRng(42), count=5)
-    screen = HireScreen(candidates)
-    text = screen.render()
+    text = render_hire_text(candidates)
     for c in candidates:
         assert c.name in text
     assert "1." in text
@@ -70,9 +69,9 @@ def test_fire_screen_sorts_by_satisfaction_ascending() -> None:
 def test_fire_screen_render_marks_zombie() -> None:
     state = CompanyState().add_employee(_zombie())
     screen = FireScreen(state)
-    text = screen.render()
-    assert "ZOMBIE" in text
-    assert "sat:10%" in text
+    text = render_fire_text(screen.ordered)
+    assert "좀비" in text
+    assert "만족도:10%" in text
 
 
 def test_fire_screen_select_returns_id() -> None:

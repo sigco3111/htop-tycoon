@@ -13,10 +13,10 @@ from htop_tycoon.ui.app import HtopTycoonApp
 from htop_tycoon.ui.mock_state import mock_state
 
 EXPECTED_HEADER: tuple[str, ...] = (
-    "Year 1",
-    "Cash $100,000",
-    "Fans 0",
-    "Strategy: Balanced",
+    "1년차",
+    "자금 $100,000",
+    "팬 0명",
+    "전략: 균형",
 )
 
 EXPECTED_EMPLOYEE_NAMES: tuple[str, ...] = (
@@ -28,9 +28,9 @@ EXPECTED_EMPLOYEE_NAMES: tuple[str, ...] = (
     "Frank",
 )
 
-EXPECTED_DEPT_LABELS: tuple[str, ...] = ("DEV", "ART", "SOUND", "QA")
+EXPECTED_DEPT_LABELS: tuple[str, ...] = ("개발", "아트", "사운드", "QA")
 
-EXPECTED_METRIC_AXES: tuple[str, ...] = ("FUN", "GRAPHICS", "SOUND", "ORIGINAL")
+EXPECTED_METRIC_AXES: tuple[str, ...] = ("재미", "그래픽", "사운드", "독창성")
 
 EXPECTED_METRIC_VALUES: tuple[str, ...] = ("60", "40", "30", "50")
 
@@ -40,21 +40,22 @@ EXPECTED_FOOTER: tuple[str, ...] = (
     "F3검색",
     "F5트리",
     "F7승진",
+    "F8로드",
     "F9해고",
     "H고용",
     "n새게임",
     "s전략",
     "d자동",
-    "Speed 1x",
-    "Auto OFF",
+    "속도 정지",
+    "자동 OFF",
 )
 
 ALL_EXPECTED_STRINGS: tuple[str, ...] = (
     *EXPECTED_HEADER,
     *EXPECTED_EMPLOYEE_NAMES,
     *EXPECTED_DEPT_LABELS,
-    "LEAD",
-    "[Z]",
+    "리드",
+    "[좀비]",
     "$",
     *EXPECTED_METRIC_AXES,
     *EXPECTED_METRIC_VALUES,

@@ -17,8 +17,8 @@ from htop_tycoon.domain import (
 from htop_tycoon.domain.rng import GameRng
 from htop_tycoon.ui.app import HtopTycoonApp
 from htop_tycoon.ui.mock_state import mock_state
-from htop_tycoon.ui.screens.console import ConsoleMarketScreen
-from htop_tycoon.ui.screens.release import ReleaseScreen
+from htop_tycoon.ui.screens.console import ConsoleMarketScreen, render_console_market_text
+from htop_tycoon.ui.screens.release import ReleaseScreen, render_release_text
 
 
 def _shipped_project(pid: int = 1) -> GameProject:
@@ -39,13 +39,13 @@ def _shipped_project(pid: int = 1) -> GameProject:
 def test_release_screen_empty_state() -> None:
     state = CompanyState()
     screen = ReleaseScreen(state)
-    assert "no shipped projects" in screen.render()
+    assert "출시 가능한 프로젝트가 없습니다" in render_release_text(list(screen.projects))
 
 
 def test_release_screen_renders_shipped() -> None:
     state = CompanyState().add_project(_shipped_project())
     screen = ReleaseScreen(state)
-    text = screen.render()
+    text = render_release_text(list(screen.projects))
     assert "Eldritch Quest" in text
     assert "RPG" in text
 
@@ -60,7 +60,7 @@ def test_release_screen_select_returns_id() -> None:
 def test_console_market_screen_lists_available() -> None:
     state = CompanyState(cash=Money(500_000_00))
     screen = ConsoleMarketScreen(state)
-    text = screen.render()
+    text = render_console_market_text(state, list(screen.listings))
     assert "NOVA" in text
     assert "PIXEL_2" in text
 

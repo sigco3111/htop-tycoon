@@ -56,7 +56,7 @@ async def test_tick_wiring_advances_state() -> None:
     raw = svg_file.read_text(encoding="utf-8")
     content = _normalize_svg(raw)
 
-    day_marker = f"Year {app._state.year}"
+    day_marker = f"{app._state.year}년차"
     assert day_marker in content, (
         f"SVG should show '{day_marker}' after {NUM_TICKS} ticks"
     )

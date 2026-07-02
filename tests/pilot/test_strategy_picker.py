@@ -6,7 +6,7 @@ from htop_tycoon.domain.enums import StrategyKind
 from htop_tycoon.domain.rng import GameRng
 from htop_tycoon.ui.app import HtopTycoonApp
 from htop_tycoon.ui.mock_state import mock_state
-from htop_tycoon.ui.screens.strategy_picker import StrategyPicker
+from htop_tycoon.ui.screens.strategy_picker import StrategyPicker, render_strategy_picker_text
 
 SCREENSHOT_DIR: str = "docs/screenshots"
 SCREENSHOT_NAME: str = "phase2h_strategy_picker.svg"
@@ -14,19 +14,17 @@ TEST_SCREEN_SIZE: tuple[int, int] = (120, 40)
 
 
 def test_picker_renders_currently_selected() -> None:
-    picker = StrategyPicker(StrategyKind.BALANCED)
-    text = picker.render()
-    assert "Balanced" in text
-    assert "→ Balanced ←" in text
+    text = render_strategy_picker_text(StrategyKind.BALANCED)
+    assert "균형" in text
+    assert "→ 균형 ←" in text
 
 
 def test_picker_renders_all_four_options() -> None:
-    picker = StrategyPicker(StrategyKind.AGGRESSIVE)
-    text = picker.render()
-    assert "Aggressive" in text
-    assert "Conservative" in text
-    assert "Balanced" in text
-    assert "Genre Focus" in text
+    text = render_strategy_picker_text(StrategyKind.AGGRESSIVE)
+    assert "공격적" in text
+    assert "보수적" in text
+    assert "균형" in text
+    assert "장르 집중" in text
 
 
 def test_picker_select_returns_picked_kind() -> None:
@@ -36,21 +34,19 @@ def test_picker_select_returns_picked_kind() -> None:
 
 
 def test_picker_render_with_genre_focus() -> None:
-    picker = StrategyPicker(StrategyKind.GENRE_FOCUS)
-    text = picker.render()
-    assert "Genre Focus" in text
-    assert "→ Genre Focus ←" in text
+    text = render_strategy_picker_text(StrategyKind.GENRE_FOCUS)
+    assert "장르 집중" in text
+    assert "→ 장르 집중 ←" in text
 
 
 def test_picker_render_output_includes_all_strategies() -> None:
-    """Picker's render() output covers all 4 strategy names — captured for visual review."""
-    picker = StrategyPicker(StrategyKind.AGGRESSIVE)
-    text = picker.render()
-    assert "Aggressive" in text
-    assert "Conservative" in text
-    assert "Balanced" in text
-    assert "Genre Focus" in text
-    assert "→ Aggressive ←" in text
+    """Picker's render output covers all 4 strategy names — captured for visual review."""
+    text = render_strategy_picker_text(StrategyKind.AGGRESSIVE)
+    assert "공격적" in text
+    assert "보수적" in text
+    assert "균형" in text
+    assert "장르 집중" in text
+    assert "→ 공격적 ←" in text
 
 
 def test_app_s_key_opens_picker() -> None:
