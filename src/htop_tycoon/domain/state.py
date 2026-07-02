@@ -11,12 +11,16 @@ from __future__ import annotations
 import dataclasses
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from htop_tycoon.domain.employee import Employee
-from htop_tycoon.domain.enums import StrategyKind
+from htop_tycoon.domain.enums import Console, StrategyKind
 from htop_tycoon.domain.ids import EmployeeId, ProjectId
 from htop_tycoon.domain.money import Money
 from htop_tycoon.domain.project import GameProject
+
+if TYPE_CHECKING:
+    from htop_tycoon.engine.endings import LegacyScore
 
 YEAR_LENGTH_DAYS: int = 365
 DEFAULT_RNG_SEED: int = 42
@@ -39,6 +43,11 @@ class CompanyState:
     employees: dict[EmployeeId, Employee] = field(default_factory=dict)
     projects: dict[ProjectId, GameProject] = field(default_factory=dict)
     rng_seed: int = DEFAULT_RNG_SEED
+    games_shipped: int = 0
+    mega_hits: int = 0
+    own_console: Console | None = None
+    voluntary_sale_pending: bool = False
+    legacy_scores: tuple[LegacyScore, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.year, int) or self.year < MIN_YEAR:
@@ -118,3 +127,19 @@ class CompanyState:
 
     def list_projects(self) -> Iterable[GameProject]:
         return self.projects.values()
+
+    def increment_games_shipped(self) -> CompanyState:
+        return dataclasses.replace(self, games_shipped=self.games_shipped + 1)
+
+    def increment_mega_hits(self) -> CompanyState:
+        return dataclasses.replace(self, mega_hits=self.mega_hits + 1)
+
+    def mark_own_console(self, console: Console) -> CompanyState:
+        return dataclasses.replace(self, own_console=console)
+
+    def set_voluntary_sale_pending(self, flag: bool) -> CompanyState:
+        return dataclasses.replace(self, voluntary_sale_pending=flag)
+
+    def append_legacy_score(self, score: LegacyScore) -> CompanyState:
+        new_scores: tuple[LegacyScore, ...] = (*self.legacy_scores, score)
+        return dataclasses.replace(self, legacy_scores=new_scores)

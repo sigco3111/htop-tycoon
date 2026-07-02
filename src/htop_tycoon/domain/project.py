@@ -27,6 +27,8 @@ class GameProject:
     days_in_dev: int
     lead_id: EmployeeId | None
     team_ids: tuple[EmployeeId, ...] = field(default=())
+    units_sold: int = 0
+    hall_of_fame: bool = False
 
     def __post_init__(self) -> None:
         # Normalize team_ids to tuple — preserves frozen + hashable semantics.
