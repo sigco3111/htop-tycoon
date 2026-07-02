@@ -45,11 +45,11 @@ class HtopHeader(Widget):
         # via its own ``app.active_strategy`` attribute.
         strategy = getattr(self.app, "active_strategy", None) or "manual"
         return (
-            f"[bold cyan]htop-tycoon v3.0[/]  "
+            f"[bold #39ff14]htop-tycoon v3.0[/]  "
             f"[white]Year[/][yellow]{year}[/]  "
             f"[white]Cash[/][green]{cash}[/]  "
             f"[white]Fans[/][magenta]{fans}[/]  "
-            f"[white]Strategy[/][cyan]{strategy}[/]"
+            f"[white]Strategy[/][#39ff14]{strategy}[/]"
         )
 
 

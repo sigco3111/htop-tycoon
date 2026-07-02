@@ -112,3 +112,30 @@ def test_theme_uses_terminal_green_not_sky_blue() -> None:
     assert HTOPTYCOON_THEME.accent != "#5fafff"
     assert HTOPTYCOON_THEME.primary == "#00ffaf"
     assert HTOPTYCOON_THEME.dark is True
+
+
+def test_no_cyan_markup_remains_in_ui_source() -> None:
+    """Regression guard: no Rich ``[cyan]`` markup or ``"cyan"`` Python literal
+    in UI source — every such token must use the terminal-green hex ``#39ff14``
+    so the on-screen color is the readable htop neon green, not Rich's default
+    fixed cyan (which read too dark on the near-black background).
+    """
+    from pathlib import Path
+
+    ui_root = Path(__file__).resolve().parents[2] / "src" / "htop_tycoon" / "ui"
+    offenders: list[tuple[str, int, str]] = []
+    for py in ui_root.rglob("*.py"):
+        if "__pycache__" in py.parts:
+            continue
+        for lineno, line in enumerate(py.read_text(encoding="utf-8").splitlines(), start=1):
+            stripped = line.lstrip()
+            if stripped.startswith("#"):
+                continue
+            if "[cyan]" in line or "[bold cyan]" in line or '"cyan"' in line or "'cyan'" in line:
+                rel = str(py.relative_to(ui_root.parent.parent))
+                offenders.append((rel, lineno, line.rstrip()))
+
+    assert not offenders, (
+        "cyan markup found in UI source — must use '#39ff14' for readability:\n"
+        + "\n".join(f"  {p}:{n}: {t}" for p, n, t in offenders)
+    )

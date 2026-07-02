@@ -51,7 +51,7 @@ class MetricBar(Widget):
         }
         color = {
             QualityAxis.FUN: "green",
-            QualityAxis.GRAPHICS: "cyan",
+            QualityAxis.GRAPHICS: "#39ff14",
             QualityAxis.SOUND: "magenta",
             QualityAxis.ORIGINALITY: "yellow",
         }

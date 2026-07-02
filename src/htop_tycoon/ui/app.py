@@ -197,7 +197,7 @@ class HtopTycoonApp(App[None]):
         self.auto_mode = not self.auto_mode
         status = "ON" if self.auto_mode else "OFF"
         self.query_one("#content", Static).update(
-            f"[cyan]Auto 모드: {status}[/]"
+            f"[#39ff14]Auto 모드: {status}[/]"
         )
 
     def action_toggle_pause(self) -> None:
@@ -210,27 +210,27 @@ class HtopTycoonApp(App[None]):
         if self.speed > 0:
             self.set_interval(1.0 / self.speed, self._tick_one_day)
         status = "재개 (resumed)" if self.speed > 0 else "일시정지 (paused)"
-        self.query_one("#content", Static).update(f"[cyan]{status}[/]")
+        self.query_one("#content", Static).update(f"[#39ff14]{status}[/]")
 
     def action_speed_0(self) -> None:
         self.speed = 0
-        self.query_one("#content", Static).update("[cyan]속도: 정지 (0)[/]")
+        self.query_one("#content", Static).update("[#39ff14]속도: 정지 (0)[/]")
 
     def action_speed_1(self) -> None:
         self.speed = 1
-        self.query_one("#content", Static).update("[cyan]속도: 1x[/]")
+        self.query_one("#content", Static).update("[#39ff14]속도: 1x[/]")
 
     def action_speed_2(self) -> None:
         self.speed = 2
-        self.query_one("#content", Static).update("[cyan]속도: 2x[/]")
+        self.query_one("#content", Static).update("[#39ff14]속도: 2x[/]")
 
     def action_speed_3(self) -> None:
         self.speed = 3
-        self.query_one("#content", Static).update("[cyan]속도: 3x[/]")
+        self.query_one("#content", Static).update("[#39ff14]속도: 3x[/]")
 
     def action_speed_4(self) -> None:
         self.speed = 4
-        self.query_one("#content", Static).update("[cyan]속도: 4x (QA)[/]")
+        self.query_one("#content", Static).update("[#39ff14]속도: 4x (QA)[/]")
 
     def action_quit_or_sell(self) -> None:
         """Spec §4.1: F10/q opens the quit/sell dialog (Wave 6+ follow-up)."""
