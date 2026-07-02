@@ -25,12 +25,17 @@ from htop_tycoon.engine import (
     MarketState,
     construct_legacy_score,
     detect_ending,
+    fire_employee,
+    generate_candidates,
+    hire_employee,
     record_ending,
     tick,
 )
 from htop_tycoon.persistence import SAVE_PATH, load_state, save_state
 from htop_tycoon.ui.mock_state import mock_state
 from htop_tycoon.ui.screens.ending import EndingScreen, LegacyPanel
+from htop_tycoon.ui.screens.fire import FireScreen
+from htop_tycoon.ui.screens.hire import HireScreen
 from htop_tycoon.ui.screens.strategy_picker import StrategyPicker
 from htop_tycoon.ui.theme import HtopTycoonTheme
 from htop_tycoon.ui.widgets.footer import Footer as HtopFooter
@@ -72,6 +77,13 @@ class HtopTycoonApp(App[int]):
         Binding("2", "select_strategy('CONSERVATIVE')", "2.Cons", show=False),
         Binding("3", "select_strategy('BALANCED')", "3.Bal", show=False),
         Binding("4", "select_strategy('GENRE_FOCUS')", "4.Focus", show=False),
+        Binding("h", "open_hire_screen", "Hire", show=True),
+        Binding("x", "open_fire_screen", "Fire", show=True),
+        Binding("5", "select_candidate('5')", "5.Cand", show=False),
+        Binding("6", "select_candidate('6')", "6.Cand", show=False),
+        Binding("7", "select_candidate('7')", "7.Cand", show=False),
+        Binding("8", "select_candidate('8')", "8.Cand", show=False),
+        Binding("9", "select_fire_target('9')", "9.Fire", show=False),
         Binding("q", "quit", "Quit", show=True),
     ]
 
@@ -93,6 +105,8 @@ class HtopTycoonApp(App[int]):
         self._tick_count: int = 0
         self._pending_ending_screen: EndingScreen | None = None
         self._pending_strategy_picker: StrategyPicker | None = None
+        self._pending_hire_screen: HireScreen | None = None
+        self._pending_fire_screen: FireScreen | None = None
 
     def compose(self) -> ComposeResult:
         yield HtopHeader(state=self._state)
@@ -197,5 +211,46 @@ class HtopTycoonApp(App[int]):
         kind = StrategyKind(kind_str)
         self._state = self._state.set_strategy(kind)
         self.notify(f"Strategy: {kind.value}")
+        self._refresh_header()
+        self._refresh_widgets()
+
+    def action_open_hire_screen(self) -> None:
+        used = {e.name for e in self._state.employees.values()}
+        self._pending_hire_screen = HireScreen(
+            generate_candidates(self._rng, count=5, used_names=used)
+        )
+        self.notify(f"Hire: {len(self._pending_hire_screen.candidates)} candidates")
+
+    def action_select_candidate(self, idx_str: str) -> None:
+        if self._pending_hire_screen is None:
+            return
+        candidate = self._pending_hire_screen.select(int(idx_str))
+        if candidate is None:
+            self.notify("Invalid selection")
+            return
+        self._state = hire_employee(self._state, candidate)
+        self.notify(f"Hired: {candidate.name} ({candidate.job.value} L{candidate.suggested_level})")
+        self._pending_hire_screen = None
+        self._refresh_header()
+        self._refresh_widgets()
+
+    def action_open_fire_screen(self) -> None:
+        if not self._state.employees:
+            self.notify("No employees to fire")
+            return
+        self._pending_fire_screen = FireScreen(self._state)
+        self.notify("Fire: pick employee to terminate")
+
+    def action_select_fire_target(self, idx_str: str) -> None:
+        if self._pending_fire_screen is None:
+            return
+        target_id = self._pending_fire_screen.select(int(idx_str))
+        if target_id is None:
+            self.notify("Invalid selection")
+            return
+        emp_name = self._state.employees[target_id].name
+        self._state = fire_employee(self._state, target_id)
+        self.notify(f"Fired: {emp_name}")
+        self._pending_fire_screen = None
         self._refresh_header()
         self._refresh_widgets()

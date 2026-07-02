@@ -196,8 +196,10 @@ def test_current_strategy_returns_correct_instance() -> None:
 
 
 def test_strategy_decision_is_frozen() -> None:
+    from dataclasses import FrozenInstanceError
+
     import pytest
 
     d = StrategyDecision("hire", "any", 2, "growth")
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         d.action = "fire"  # type: ignore[misc]

@@ -252,8 +252,6 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
 
 def current_strategy(state: CompanyState) -> Strategy:
     """Instantiate the strategy that matches state.strategy."""
-    from htop_tycoon.domain.enums import StrategyKind
-
     cls = STRATEGY_REGISTRY[state.strategy.value]
     if cls is GenreFocusStrategy:
         return cls(state.focus_genre)

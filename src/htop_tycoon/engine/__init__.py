@@ -26,6 +26,13 @@ from htop_tycoon.engine.game_dev import (
     advance_projects,
     compute_daily_progress,
 )
+from htop_tycoon.engine.hr import (
+    CANDIDATE_NAMES,
+    HireCandidate,
+    fire_employee,
+    generate_candidates,
+    hire_employee,
+)
 from htop_tycoon.engine.market import (
     CONSOLE_POPULARITY,
     DEFAULT_TREND,
@@ -112,4 +119,9 @@ __all__ = [
     "BalancedStrategy",
     "GenreFocusStrategy",
     "current_strategy",
+    "HireCandidate",
+    "hire_employee",
+    "fire_employee",
+    "generate_candidates",
+    "CANDIDATE_NAMES",
 ]
