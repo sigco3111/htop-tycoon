@@ -35,7 +35,7 @@ async def test_startup_render() -> None:
         assert metric.project is None or metric.project.is_complete
         # Footer renders the F-key legend
         footer_text = str(app.query_one(HtopFooter).render())
-        assert "도움말" in footer_text  # F1 Korean label
+        assert "도움" in footer_text    # F1 Korean label (abbreviated in compact footer)
         assert "정지" in footer_text     # 0 = pause
 
 

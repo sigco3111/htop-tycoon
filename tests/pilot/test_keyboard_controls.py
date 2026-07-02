@@ -72,7 +72,11 @@ async def test_footer_lists_action_keys_so_user_can_discover_them() -> None:
     async with app.run_test() as pilot:
         await pilot.pause()
         footer = str(app.query_one(HtopFooter).render())
-        for hint in ("[d] Auto", "[H]", "[n]", "[s]", "[0]", "[1]"):
+        hints = (
+            "[d]Auto", "[H]고용", "[n]새게임", "[g]진행", "[s]전략",
+            "[a]시상", "[c]콘솔", "[0]정지", "[1]1x",
+        )
+        for hint in hints:
             assert hint in footer, f"footer missing hint {hint!r}: {footer!r}"
 
 
