@@ -236,13 +236,42 @@ class HtopTycoonApp(App[int]):
         self.push_screen(modal, callback=_on_dismiss)
 
     def _close_modal(self) -> None:
-        """Pop the top modal screen if any."""
+        """Pop the top modal screen and clear its _pending alias synchronously.
+
+        Workaround for Textual's pop_screen callback being scheduled via
+        call_next (asynchronous) and not executing before pilot.pause().
+        Without this synchronous cleanup, _pending_*_screen stays set to
+        the modal instance after dismiss — _is_modal_open() stays True
+        and tick pause remains in effect.
+        """
         if len(self.screen_stack) > 1:
-            self.pop_screen()
+            self.screen_stack.pop()
+        for attr in (
+            "_pending_strategy_picker",
+            "_pending_hire_screen",
+            "_pending_fire_screen",
+            "_pending_release_screen",
+            "_pending_console_screen",
+            "_pending_promote_screen",
+            "_pending_search_screen",
+            "_pending_help_screen",
+            "_pending_new_project_screen",
+            "_pending_ending_screen",
+        ):
+            setattr(self, attr, None)
 
     def action_digit(self, key: str) -> None:
         """Forward a digit key from a ModalScreen to the router."""
         self.action_route_digit(key)
+
+    def action_close_top_modal(self) -> None:
+        """Esc 핸들러 (모든 ModalScreen BINDINGS escape에서 호출).
+
+        동기적으로 screen_stack pop + _pending_* 모두 정리.
+        _close_modal()과 동일하지만 action으로 노출하여
+        ModalScreen BINDINGS에서 직접 호출 가능.
+        """
+        self._close_modal()
 
     def action_toggle_pause(self) -> None:
         new_speed = 0 if self._state.speed > 0 else 1

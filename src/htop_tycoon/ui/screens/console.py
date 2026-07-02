@@ -39,7 +39,7 @@ class ConsoleMarketScreen(ModalScreen[None]):
     """콘솔 마켓 모달. Esc로 닫기."""
 
     BINDINGS = [
-        Binding("escape", "app.pop_screen", "닫기"),
+        Binding("escape", "app.close_top_modal", "닫기"),
         Binding("0", "app.digit('0')", "정지"),
         Binding("1", "app.digit('1')", "1"),
         Binding("2", "app.digit('2')", "2"),
