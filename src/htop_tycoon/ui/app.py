@@ -187,11 +187,23 @@ class HtopTycoonApp(App[int]):
         if self._is_modal_open():
             self._refresh_footer()
             return
-        body = self.query_one("#body", Vertical)
-        body.remove_children()
-        body.mount(OrgTree(self._state))
-        body.mount(MetricBar(self._state))
-        body.mount(Static(LegacyPanel(self._state.legacy_scores).render()))
+        try:
+            body = self.query_one("#body", Vertical)
+        except Exception:
+            return
+        try:
+            orgtree = self.query_one(OrgTree)
+            orgtree.update_state(self._state)
+            for child in list(body.children):
+                if not isinstance(child, OrgTree):
+                    child.remove()
+            body.mount(MetricBar(self._state))
+            body.mount(Static(LegacyPanel(self._state.legacy_scores).render()))
+        except Exception:
+            body.remove_children()
+            body.mount(OrgTree(self._state))
+            body.mount(MetricBar(self._state))
+            body.mount(Static(LegacyPanel(self._state.legacy_scores).render()))
         self._refresh_footer()
 
     def _is_modal_open(self) -> bool:
