@@ -23,6 +23,7 @@ from htop_tycoon.domain import (
     ProjectId,
     QualityAxes,
     StrategyKind,
+    compute_salary,
 )
 
 
@@ -41,7 +42,7 @@ def mock_state() -> CompanyState:
         name="Ada",
         job=Job.LEAD,
         level=5,
-        salary=Money(0),  # overwritten by add_employee recompute; placeholder
+        salary=compute_salary(Job.LEAD, 5).amount,
         satisfaction=85,
         dept=Department.DEV,
     )
@@ -50,7 +51,7 @@ def mock_state() -> CompanyState:
         name="Bob",
         job=Job.JUNIOR,
         level=2,
-        salary=Money(0),
+        salary=compute_salary(Job.JUNIOR, 2).amount,
         satisfaction=70,
         dept=Department.DEV,
     )
@@ -59,7 +60,7 @@ def mock_state() -> CompanyState:
         name="Carol",
         job=Job.DESIGNER,
         level=4,
-        salary=Money(0),
+        salary=compute_salary(Job.DESIGNER, 4).amount,
         satisfaction=75,
         dept=Department.ART,
     )
@@ -68,7 +69,7 @@ def mock_state() -> CompanyState:
         name="Dave",
         job=Job.SOUND_ENGINEER,
         level=3,
-        salary=Money(0),
+        salary=compute_salary(Job.SOUND_ENGINEER, 3).amount,
         satisfaction=80,
         dept=Department.SOUND,
     )
@@ -77,7 +78,7 @@ def mock_state() -> CompanyState:
         name="Eve",
         job=Job.QA,
         level=2,
-        salary=Money(0),
+        salary=compute_salary(Job.QA, 2).amount,
         satisfaction=15,
         dept=Department.QA,
     )
@@ -86,7 +87,7 @@ def mock_state() -> CompanyState:
         name="Frank",
         job=Job.QA,
         level=4,
-        salary=Money(0),
+        salary=compute_salary(Job.QA, 4).amount,
         satisfaction=70,
         dept=Department.QA,
     )
