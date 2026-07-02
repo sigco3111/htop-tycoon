@@ -119,6 +119,7 @@ class HtopTycoonApp(App[None]):
         from htop_tycoon.ui.theme import HTOPTYCOON_THEME
         try:
             self.register_theme(HTOPTYCOON_THEME)
+            self.theme = "htoptycoon"
         except Exception:  # noqa: BLE001
             # Older Textual versions may not support register_theme the same
             # way; fall back to the built-in theme so the app still boots.

@@ -83,18 +83,22 @@ async def test_startup_render_with_active_project() -> None:
 
 @pytest.mark.asyncio
 async def test_startup_render_uses_default_theme() -> None:
-    """Spec §4.1: app boots with a valid theme (the htop-style theme is
-    registered in on_mount; the test simply verifies the app has a theme
-    set after boot — the specific name depends on the installed Textual
-    version's behavior)."""
+    """Regression guard: htoptycoon must be the ACTIVE theme, not just registered.
+
+    A previous version only called ``self.register_theme(...)`` without
+    ``self.theme = "htoptycoon"``, so the app silently kept Textual's
+    default ``textual-dark`` (cyan accents) and rendered dark blue/cyan.
+    """
     app = HtopTycoonApp(state=GameState(), speed=0)
     async with app.run_test() as pilot:
         await pilot.pause()
-        # The app must have a non-empty theme set after boot
-        assert app.theme != ""
-        # The HTOPTYCOON_THEME object must be importable
+        assert app.theme == "htoptycoon", (
+            f"app.theme={app.theme!r} — htoptycoon must be active, not just registered"
+        )
         from htop_tycoon.ui import HTOPTYCOON_THEME
         assert HTOPTYCOON_THEME.name == "htoptycoon"
+        assert HTOPTYCOON_THEME.secondary == "#39ff14"
+        assert HTOPTYCOON_THEME.accent == "#39ff14"
 
 
 def test_theme_uses_terminal_green_not_sky_blue() -> None:
