@@ -23,8 +23,8 @@ DEFAULT_RNG_SEED: int = 42
 DEFAULT_STARTING_CASH_CENTS: int = 100_000_00
 
 MIN_YEAR: int = 1
-MIN_SPEED: int = 1
-MAX_SPEED: int = 4  # 4 reserved for headless QA
+MIN_SPEED: int = 0  # 0 = paused (per README); 1-3 = user speeds; 4 = headless QA
+MAX_SPEED: int = 4
 
 
 @dataclass(slots=True)

@@ -51,7 +51,7 @@ class Footer(Horizontal):
 
     def compose(self) -> ComposeResult:
         """Yield four Static widgets: F-keys, secondary, speed, auto."""
-        yield Static(" ".join(F_KEY_HINTS), id="ftr-fkeys")
-        yield Static(" ".join(SECONDARY_KEY_HINTS), id="ftr-secondary")
-        yield Static(MOCK_SPEED_LABEL, id="ftr-speed")
-        yield Static(MOCK_AUTO_LABEL, id="ftr-auto")
+        yield Static(" ".join(F_KEY_HINTS))
+        yield Static(" ".join(SECONDARY_KEY_HINTS))
+        yield Static(MOCK_SPEED_LABEL)
+        yield Static(MOCK_AUTO_LABEL)

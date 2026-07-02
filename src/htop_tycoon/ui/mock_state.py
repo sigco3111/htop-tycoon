@@ -27,8 +27,12 @@ from htop_tycoon.domain import (
 )
 
 
-def mock_state() -> CompanyState:
-    """Build the canonical demo CompanyState used by UI tests."""
+def mock_state(speed: int = 0) -> CompanyState:
+    """Build the canonical demo CompanyState used by UI tests.
+
+    speed=0 (paused) by default so Pilot tests don't trigger the timer.
+    Pass speed=1/2/3 to simulate an actively-running game.
+    """
     state = CompanyState(
         cash=Money(100_000_00),
         fans=0,
@@ -36,6 +40,7 @@ def mock_state() -> CompanyState:
         year=1,
         day_index=0,
     )
+    state = state.set_speed(speed)
 
     ada = Employee(
         id=EmployeeId(1),

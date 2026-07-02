@@ -64,13 +64,13 @@ class MetricBar(Vertical):
     """
 
     def __init__(self, state: CompanyState) -> None:
-        super().__init__(id="metric-bar")
+        super().__init__()
         self._state = state
         self._active = _pick_active_project(state)
 
     def compose(self) -> ComposeResult:
         if self._active is None:
-            yield Static(EMPTY_PROJECT_LABEL, id="metric-bar-empty")
+            yield Static(EMPTY_PROJECT_LABEL)
             return
         quality = self._active.quality
         values = (
@@ -79,5 +79,5 @@ class MetricBar(Vertical):
             quality.sound,
             quality.originality,
         )
-        for (label, widget_id), value in zip(AXIS_LABELS, values, strict=True):
-            yield Static(_format_axis(label, value), id=widget_id)
+        for (label, _widget_id), value in zip(AXIS_LABELS, values, strict=True):
+            yield Static(_format_axis(label, value))

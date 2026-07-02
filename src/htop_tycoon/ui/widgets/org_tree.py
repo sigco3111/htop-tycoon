@@ -48,10 +48,7 @@ class OrgTree(Tree[str]):
     """
 
     def __init__(self, state: CompanyState) -> None:
-        super().__init__(
-            f"Company ({len(state.employees)} employees)",
-            id="org-tree",
-        )
+        super().__init__(f"Company ({len(state.employees)} employees)")
         self._state = state
         self._render_tree()
 

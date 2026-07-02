@@ -21,7 +21,7 @@ def test_default_construction() -> None:
     assert cs.fans == 0
     assert cs.strategy == StrategyKind.BALANCED
     assert cs.auto_on is False
-    assert cs.speed == 1
+    assert cs.speed == 0  # 0 = paused default; user keys 1/2/3 start the timer
     assert cs.employees == {}
     assert cs.projects == {}
     assert cs.rng_seed == DEFAULT_RNG_SEED
@@ -163,10 +163,13 @@ def test_set_speed_validates_range() -> None:
     cs = CompanyState()
     new_cs = cs.set_speed(2)
     assert new_cs.speed == 2
-    with pytest.raises(ValueError):
-        cs.set_speed(0)
+    # speed=0 = paused (per README)
+    paused = cs.set_speed(0)
+    assert paused.speed == 0
     with pytest.raises(ValueError):
         cs.set_speed(-1)
+    with pytest.raises(ValueError):
+        cs.set_speed(5)
 
 
 def test_toggle_auto() -> None:

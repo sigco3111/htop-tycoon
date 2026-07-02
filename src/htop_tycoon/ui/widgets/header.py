@@ -39,7 +39,7 @@ class Header(Horizontal):
     """
 
     def __init__(self, state: CompanyState | None = None) -> None:
-        super().__init__(id="header")
+        super().__init__()
         self._state = state
 
     def compose(self) -> ComposeResult:
