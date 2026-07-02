@@ -15,6 +15,7 @@ from typing import ClassVar
 
 from textual.app import App, ComposeResult
 from textual.containers import Vertical
+from textual.timer import Timer
 from textual.widgets import Static
 
 from htop_tycoon.bindings.registry import BINDINGS, validate_bindings
@@ -93,6 +94,7 @@ class HtopTycoonApp(App[None]):
         self.auto_mode: bool = auto_mode
         self.active_strategy: str | None = strategy_name
         self._tick_interval: float = 1.0 / max(speed, 1) if speed > 0 else 0.0
+        self._timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         """Spec §4.1: header (top) + body + metric bar + footer (bottom)."""
@@ -128,11 +130,8 @@ class HtopTycoonApp(App[None]):
         # Pick the first active project (if any) for the metric bar
         active = next((p for p in self._state.projects if not p.is_complete), None)
         self.query_one(MetricBar).project = active
-        # Start the tick timer (only if speed > 0)
-        if self.speed > 0:
-            self._timer = self.set_interval(
-                self._tick_interval, self._tick_one_day
-            )
+        self._timer = None
+        self._restart_tick_timer()
 
     def _tick_one_day(self) -> None:
         """Advance the simulation by one game-day (spec §5.2)."""
@@ -144,6 +143,21 @@ class HtopTycoonApp(App[None]):
         self.query_one(HtopHeader).state = self._state
         active = next((p for p in self._state.projects if not p.is_complete), None)
         self.query_one(MetricBar).project = active
+
+    def _restart_tick_timer(self) -> None:
+        """Stop any existing per-day timer and start a fresh one at the
+        current speed. ``speed == 0`` means paused (no timer running).
+        """
+        current = self._timer
+        if current is not None:
+            try:
+                current.stop()
+            except Exception:  # noqa: BLE001
+                pass
+            self._timer = None
+        if self.speed > 0:
+            interval = 1.0 / self.speed
+            self._timer = self.set_interval(interval, self._tick_one_day)
 
     # Action dispatch — spec §4.1 actions. The strategy_picker and
     # game_starter push the modal screens. Save delegates to the persistence
@@ -204,33 +218,36 @@ class HtopTycoonApp(App[None]):
     def action_toggle_pause(self) -> None:
         """Spec §4.1: 'p' toggles pause (speed = 0 ↔ previous speed)."""
         if self.speed == 0:
-            self.speed = 1  # resume at default 1x
+            self.speed = 1
         else:
             self.speed = 0
-        # Recompute tick interval based on new speed
-        if self.speed > 0:
-            self.set_interval(1.0 / self.speed, self._tick_one_day)
+        self._restart_tick_timer()
         status = "재개 (resumed)" if self.speed > 0 else "일시정지 (paused)"
         self.query_one("#content", Static).update(f"[#39ff14]{status}[/]")
 
     def action_speed_0(self) -> None:
         self.speed = 0
+        self._restart_tick_timer()
         self.query_one("#content", Static).update("[#39ff14]속도: 정지 (0)[/]")
 
     def action_speed_1(self) -> None:
         self.speed = 1
+        self._restart_tick_timer()
         self.query_one("#content", Static).update("[#39ff14]속도: 1x[/]")
 
     def action_speed_2(self) -> None:
         self.speed = 2
+        self._restart_tick_timer()
         self.query_one("#content", Static).update("[#39ff14]속도: 2x[/]")
 
     def action_speed_3(self) -> None:
         self.speed = 3
+        self._restart_tick_timer()
         self.query_one("#content", Static).update("[#39ff14]속도: 3x[/]")
 
     def action_speed_4(self) -> None:
         self.speed = 4
+        self._restart_tick_timer()
         self.query_one("#content", Static).update("[#39ff14]속도: 4x (QA)[/]")
 
     def action_quit_or_sell(self) -> None:
