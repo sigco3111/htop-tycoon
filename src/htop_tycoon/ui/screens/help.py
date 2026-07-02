@@ -60,6 +60,7 @@ class HelpScreen(ModalScreen[None]):
 
     DEFAULT_CSS = """
     HelpScreen {
+        layer: modal;
         align: center middle;
     }
     #help-content {

@@ -54,6 +54,7 @@ class ConsoleMarketScreen(ModalScreen[None]):
 
     DEFAULT_CSS = """
     ConsoleMarketScreen {
+        layer: modal;
         align: center middle;
     }
     #console-content {

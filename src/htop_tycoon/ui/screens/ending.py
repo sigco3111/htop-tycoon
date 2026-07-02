@@ -86,6 +86,7 @@ class EndingScreen(ModalScreen[None]):
 
     DEFAULT_CSS = """
     EndingScreen {
+        layer: modal;
         align: center middle;
     }
     #ending-content {

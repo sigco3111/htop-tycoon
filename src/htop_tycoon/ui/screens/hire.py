@@ -45,6 +45,7 @@ class HireScreen(ModalScreen[None]):
 
     DEFAULT_CSS = """
     HireScreen {
+        layer: modal;
         align: center middle;
     }
     #hire-content {

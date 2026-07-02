@@ -48,6 +48,7 @@ class StrategyPicker(ModalScreen[None]):
 
     DEFAULT_CSS = """
     StrategyPicker {
+        layer: modal;
         align: center middle;
     }
     #strategy-picker-content {

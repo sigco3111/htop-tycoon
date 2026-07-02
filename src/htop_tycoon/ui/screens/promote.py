@@ -55,6 +55,7 @@ class PromoteScreen(ModalScreen[None]):
 
     DEFAULT_CSS = """
     PromoteScreen {
+        layer: modal;
         align: center middle;
     }
     #promote-content {

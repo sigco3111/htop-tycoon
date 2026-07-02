@@ -46,6 +46,7 @@ class FireScreen(ModalScreen[None]):
 
     DEFAULT_CSS = """
     FireScreen {
+        layer: modal;
         align: center middle;
     }
     #fire-content {

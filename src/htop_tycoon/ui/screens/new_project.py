@@ -43,6 +43,7 @@ class NewProjectScreen(ModalScreen[None]):
 
     DEFAULT_CSS = """
     NewProjectScreen {
+        layer: modal;
         align: center middle;
     }
     #new-project-content {

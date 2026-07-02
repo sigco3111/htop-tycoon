@@ -49,6 +49,7 @@ class ReleaseScreen(ModalScreen[None]):
 
     DEFAULT_CSS = """
     ReleaseScreen {
+        layer: modal;
         align: center middle;
     }
     #release-content {

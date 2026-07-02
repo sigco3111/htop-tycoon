@@ -43,6 +43,7 @@ class SearchScreen(ModalScreen[None]):
 
     DEFAULT_CSS = """
     SearchScreen {
+        layer: modal;
         align: center middle;
     }
     #search-content {
