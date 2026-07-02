@@ -4,7 +4,6 @@
 
 > A TUI port of Kairosoft's **Game Dev Story**, styled to look like htop, with an automated **Strategy Manager** that runs the company while you watch the metrics.
 
-[![CI](https://github.com/sigco3111/htop-tycoon/actions/workflows/ci.yml/badge.svg)](https://github.com/sigco3111/htop-tycoon/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](pyproject.toml)
 
