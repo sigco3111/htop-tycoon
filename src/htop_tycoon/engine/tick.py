@@ -208,7 +208,11 @@ def tick(
     new_state = _ship_projects(new_state, rng, active_market)
     new_state = _update_counters_and_legacy(new_state)
     new_state = _record_legacy_after_tick(new_state)
-    new_state = _apply_strategy_decisions(new_state, rng)
+    if state.auto_on:
+        from htop_tycoon.engine.auto import auto_execute
+        new_state = auto_execute(new_state, rng, active_market)
+    else:
+        new_state = _apply_strategy_decisions(new_state, rng)
     new_state = new_state.advance_day()
 
     return new_state
