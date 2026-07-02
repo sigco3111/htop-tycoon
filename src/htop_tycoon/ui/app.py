@@ -181,12 +181,32 @@ class HtopTycoonApp(App[int]):
         self._refresh_widgets()
 
     def _refresh_widgets(self) -> None:
+        if self._is_modal_open():
+            self._refresh_footer()
+            return
         body = self.query_one("#body", Vertical)
         body.remove_children()
         body.mount(OrgTree(self._state))
         body.mount(MetricBar(self._state))
         body.mount(Static(LegacyPanel(self._state.legacy_scores).render()))
         self._refresh_footer()
+
+    def _is_modal_open(self) -> bool:
+        return any(
+            pending is not None
+            for pending in (
+                self._pending_strategy_picker,
+                self._pending_hire_screen,
+                self._pending_fire_screen,
+                self._pending_release_screen,
+                self._pending_console_screen,
+                self._pending_promote_screen,
+                self._pending_search_screen,
+                self._pending_help_screen,
+                self._pending_new_project_screen,
+                self._pending_ending_screen,
+            )
+        )
 
     def _refresh_footer(self) -> None:
         try:
