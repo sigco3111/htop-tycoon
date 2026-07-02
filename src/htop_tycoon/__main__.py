@@ -57,7 +57,7 @@ def _run_headless(seed: int | None, speed: int, max_ticks: int = 3) -> int:
     from htop_tycoon.engine.market import MarketState
     from htop_tycoon.ui.mock_state import mock_state
 
-    state = mock_state(speed=speed)
+    state = mock_state(speed=speed).toggle_auto()
     rng = GameRng(seed if seed is not None else state.rng_seed)
     market = MarketState.default_for_platform(Platform.PC)
 
@@ -85,7 +85,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     from htop_tycoon.ui.app import HtopTycoonApp
     from htop_tycoon.ui.mock_state import mock_state
 
-    state = mock_state(speed=args.speed)
+    state = mock_state(speed=args.speed).toggle_auto()
     rng = GameRng(args.seed if args.seed is not None else state.rng_seed)
     app = HtopTycoonApp(state=state, rng=rng, market=DEFAULT_MARKET)
     return app.run() or 0
