@@ -17,6 +17,7 @@ from textual.containers import Vertical
 from textual.widgets import Static
 
 from htop_tycoon.domain import CompanyState
+from htop_tycoon.domain.enums import StrategyKind
 from htop_tycoon.domain.rng import GameRng
 from htop_tycoon.engine import (
     DEFAULT_MARKET,
@@ -30,6 +31,7 @@ from htop_tycoon.engine import (
 from htop_tycoon.persistence import SAVE_PATH, load_state, save_state
 from htop_tycoon.ui.mock_state import mock_state
 from htop_tycoon.ui.screens.ending import EndingScreen, LegacyPanel
+from htop_tycoon.ui.screens.strategy_picker import StrategyPicker
 from htop_tycoon.ui.theme import HtopTycoonTheme
 from htop_tycoon.ui.widgets.footer import Footer as HtopFooter
 from htop_tycoon.ui.widgets.header import Header as HtopHeader
@@ -65,6 +67,11 @@ class HtopTycoonApp(App[int]):
         Binding("f2", "save_game", "Save", show=True),
         Binding("f9", "load_game", "Load", show=True),
         Binding("f10", "request_sell", "Sell studio", show=True),
+        Binding("s", "open_strategy_picker", "Strategy", show=True),
+        Binding("1", "select_strategy('AGGRESSIVE')", "1.Aggr", show=False),
+        Binding("2", "select_strategy('CONSERVATIVE')", "2.Cons", show=False),
+        Binding("3", "select_strategy('BALANCED')", "3.Bal", show=False),
+        Binding("4", "select_strategy('GENRE_FOCUS')", "4.Focus", show=False),
         Binding("q", "quit", "Quit", show=True),
     ]
 
@@ -85,6 +92,7 @@ class HtopTycoonApp(App[int]):
         self._tick_interval: Interval | None = None
         self._tick_count: int = 0
         self._pending_ending_screen: EndingScreen | None = None
+        self._pending_strategy_picker: StrategyPicker | None = None
 
     def compose(self) -> ComposeResult:
         yield HtopHeader(state=self._state)
@@ -177,4 +185,17 @@ class HtopTycoonApp(App[int]):
     def action_request_sell(self) -> None:
         self._state = self._state.set_voluntary_sale_pending(True)
         self.notify("Sell request queued — fires next tick if cash ≥ $200,000")
+        self._refresh_widgets()
+
+    def action_open_strategy_picker(self) -> None:
+        self._pending_strategy_picker = StrategyPicker(self._state.strategy)
+        self.notify(
+            f"Strategy picker (current: {self._state.strategy.value}). Press 1-4 to change."
+        )
+
+    def action_select_strategy(self, kind_str: str) -> None:
+        kind = StrategyKind(kind_str)
+        self._state = self._state.set_strategy(kind)
+        self.notify(f"Strategy: {kind.value}")
+        self._refresh_header()
         self._refresh_widgets()
