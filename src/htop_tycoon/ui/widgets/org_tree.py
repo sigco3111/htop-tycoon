@@ -29,6 +29,7 @@ class OrgTree(Static):
     DEFAULT_CSS = """
     OrgTree {
         height: 1fr;
+        max-height: 12;
         background: $surface;
         color: $foreground;
         padding: 0 1;

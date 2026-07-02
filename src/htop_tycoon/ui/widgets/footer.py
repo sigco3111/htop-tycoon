@@ -23,6 +23,7 @@ class HtopFooter(Widget):
     HtopFooter {
         dock: bottom;
         height: 2;
+        min-height: 2;
         background: $surface;
         color: $secondary;
         padding: 0 1;
