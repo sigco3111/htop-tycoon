@@ -70,7 +70,7 @@ def test_save_state_creates_yaml(tmp_path: Path) -> None:
     save_state(state, tmp_path / "save.yaml")
     text = (tmp_path / "save.yaml").read_text(encoding="utf-8")
     parsed = yaml.safe_load(text)
-    assert parsed["version"] == 1
+    assert parsed["version"] == 2
     assert parsed["state"]["year"] == 1
 
 

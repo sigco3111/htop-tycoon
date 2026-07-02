@@ -29,12 +29,24 @@ from htop_tycoon.domain import (
     QualityAxes,
     StrategyKind,
 )
+from htop_tycoon.engine.endings import EndingKind, LegacyScore
 
-SCHEMA_VERSION: int = 1
+SCHEMA_VERSION: int = 2
 
 
 class PersistenceVersionError(ValueError):
     """Raised when a persisted document's version is unknown or missing."""
+
+
+def _score_to_dict(score: LegacyScore) -> dict[str, Any]:
+    return {
+        "ending_kind": score.ending_kind.value,
+        "ending_year": score.ending_year,
+        "ending_cash_cents": score.ending_cash_cents,
+        "total_fans": score.total_fans,
+        "games_shipped": score.games_shipped,
+        "mega_hits": score.mega_hits,
+    }
 
 
 def _state_to_dict(state: CompanyState) -> dict[str, Any]:
@@ -47,6 +59,11 @@ def _state_to_dict(state: CompanyState) -> dict[str, Any]:
         "auto_on": state.auto_on,
         "speed": state.speed,
         "rng_seed": state.rng_seed,
+        "games_shipped": state.games_shipped,
+        "mega_hits": state.mega_hits,
+        "own_console": None if state.own_console is None else state.own_console.value,
+        "voluntary_sale_pending": state.voluntary_sale_pending,
+        "legacy_scores": [_score_to_dict(s) for s in state.legacy_scores],
         "employees": [
             {
                 "id": int(emp.id),
@@ -76,6 +93,8 @@ def _state_to_dict(state: CompanyState) -> dict[str, Any]:
                 "days_in_dev": proj.days_in_dev,
                 "lead_id": None if proj.lead_id is None else int(proj.lead_id),
                 "team_ids": [int(eid) for eid in proj.team_ids],
+                "units_sold": proj.units_sold,
+                "hall_of_fame": proj.hall_of_fame,
             }
             for proj in state.projects.values()
         ],
@@ -124,10 +143,16 @@ def _coerce_project(raw: dict[str, Any]) -> GameProject:
         days_in_dev=int(raw["days_in_dev"]),
         lead_id=lead_id,
         team_ids=tuple(EmployeeId(int(x)) for x in raw["team_ids"]),
+        units_sold=int(raw.get("units_sold", 0)),
+        hall_of_fame=bool(raw.get("hall_of_fame", False)),
     )
 
 
 def _coerce_state(raw: dict[str, Any]) -> CompanyState:
+    own_console_raw = raw.get("own_console")
+    own_console: Console | None = (
+        None if own_console_raw is None else Console(str(own_console_raw))
+    )
     state = CompanyState(
         year=int(raw["year"]),
         day_index=int(raw["day_index"]),
@@ -137,6 +162,10 @@ def _coerce_state(raw: dict[str, Any]) -> CompanyState:
         auto_on=bool(raw["auto_on"]),
         speed=int(raw["speed"]),
         rng_seed=int(raw["rng_seed"]),
+        games_shipped=int(raw.get("games_shipped", 0)),
+        mega_hits=int(raw.get("mega_hits", 0)),
+        own_console=own_console,
+        voluntary_sale_pending=bool(raw.get("voluntary_sale_pending", False)),
     )
     for emp_raw in raw.get("employees", []):
         emp = _coerce_employee(emp_raw)
@@ -144,6 +173,19 @@ def _coerce_state(raw: dict[str, Any]) -> CompanyState:
     for proj_raw in raw.get("projects", []):
         proj = _coerce_project(proj_raw)
         state = state.add_project(proj)
+    for score_raw in raw.get("legacy_scores", []):
+        from htop_tycoon.engine.endings import EndingKind, LegacyScore
+
+        state = state.append_legacy_score(
+            LegacyScore(
+                ending_kind=EndingKind(str(score_raw["ending_kind"])),
+                ending_year=int(score_raw["ending_year"]),
+                ending_cash_cents=int(score_raw["ending_cash_cents"]),
+                total_fans=int(score_raw["total_fans"]),
+                games_shipped=int(score_raw["games_shipped"]),
+                mega_hits=int(score_raw["mega_hits"]),
+            )
+        )
     return state
 
 

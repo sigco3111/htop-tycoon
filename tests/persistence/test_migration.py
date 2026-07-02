@@ -16,7 +16,7 @@ def test_emitted_yaml_has_version_field() -> None:
     state = mock_state()
     text = to_yaml(state)
     assert "version:" in text
-    assert "version: 1" in text
+    assert "version: 2" in text
 
 
 def test_missing_version_field_raises() -> None:
@@ -33,4 +33,4 @@ def test_roundtrip_preserves_version() -> None:
     state = mock_state()
     restored = from_yaml(to_yaml(state))
     text_again = to_yaml(restored)
-    assert "version: 1" in text_again
+    assert "version: 2" in text_again
