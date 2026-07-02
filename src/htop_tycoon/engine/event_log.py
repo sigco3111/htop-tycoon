@@ -23,6 +23,7 @@ class EventKind(StrEnum):
     MEGA_HIT = "mega_hit"
     PURCHASE_CONSOLE = "purchase_console"
     RELEASE = "release"
+    STRATEGY_CHANGED = "strategy_changed"
 
 
 @dataclass(frozen=True, slots=True)

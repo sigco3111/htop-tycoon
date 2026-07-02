@@ -62,6 +62,13 @@ from htop_tycoon.engine.sales import (
     QUALITY_MAX_SUM,
     compute_sales_revenue,
 )
+from htop_tycoon.engine.auto import (
+    AUTO_CONSOLE_BUY_MIN_CASH_CENTS,
+    AUTO_HIRE_MIN_HEADCOUNT,
+    AUTO_VOLUNTARY_SALE_MIN_CENTS,
+    AutoAction,
+    auto_execute,
+)
 from htop_tycoon.engine.strategy import (
     STRATEGY_REGISTRY,
     AggressiveStrategy,
@@ -70,6 +77,7 @@ from htop_tycoon.engine.strategy import (
     GenreFocusStrategy,
     Strategy,
     current_strategy,
+    pick_strategy,
 )
 from htop_tycoon.engine.strategy.types import StrategyDecision
 from htop_tycoon.engine.tick import (
