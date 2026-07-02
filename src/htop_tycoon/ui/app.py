@@ -516,8 +516,15 @@ class HtopTycoonApp(App[int]):
 
     def action_toggle_tree(self) -> None:
         self._tree_expanded = not self._tree_expanded
+        try:
+            orgtree = self.query_one(OrgTree)
+            if self._tree_expanded:
+                orgtree.root.expand()
+            else:
+                orgtree.root.collapse()
+        except Exception:
+            pass
         self.notify(f"트리: {'펼침' if self._tree_expanded else '접기'}")
-        self._refresh_widgets()
 
     def action_promote_employee(self) -> None:
         modal = PromoteScreen(self._state)
