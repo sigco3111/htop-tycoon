@@ -6,7 +6,7 @@ All notable changes to htop-tycoon are documented here. Format follows [Keep a C
 
 ### Added (v3.0 from scratch)
 
-Phase 1부터 Phase 2K까지 12개 phase를 거쳐 완전 재작성. 이전 v0.2.0 구현은 의도적으로 폐기 (사용자 요청: "이전 작업은 너무 엉망이였어. 참고 하지말고 처음부터 시작해").
+Phase 1부터 Phase 2L까지 13개 phase를 거쳐 완전 재작성. 이전 v0.2.0 구현은 의도적으로 폐기 (사용자 요청: "이전 작업은 너무 엉망이였어. 참고 하지말고 처음부터 시작해").
 
 #### Phase 1: htop chrome (TUI foundation)
 - Terminal-green htop-style TUI: Header (Year/Cash/Fans/Strategy) + Footer (F-key hints + Speed/Auto)
@@ -95,16 +95,25 @@ Phase 1부터 Phase 2K까지 12개 phase를 거쳐 완전 재작성. 이전 v0.2
   - `hire` auto-applied via `generate_candidates` (Aggressive/Balanced)
   - `start_project` / `save_cash` / `boost_funding` log only
 
+#### Phase 2L: EventLogPanel (strategy decision feed)
+- `ui/widgets/event_log.py`: `EventLogPanel(state)` body widget
+- Renders last 5 events from `state.event_log` with kind + day_index + description
+- Pure renderer (no state mutation, no side effects)
+- Mounted in `App.compose()` between `MetricBar` and `LegacyPanel`
+- `_refresh_widgets()` re-mounts EventLogPanel + LegacyPanel on every tick
+- Format: `Y{year}D{day} {kind:<18} {description}`
+- Empty state: "Event Log (no events yet — wait for strategy to fire)"
+
 ### Changed
 
 - `CompanyState.speed` default 1 → 0 (paused; speed=0 must be valid)
-- Domain widening with backward-compatible defaults across all 12 phases
+- Domain widening with backward-compatible defaults across all 13 phases
 
 ### Tests
 
-- 327 total tests across 90 source files
-- 90%+ coverage maintained
-- All Phase 1+2 pilot SVGs regenerated and captured in `docs/screenshots/`
+- **334 total tests** across 92 source files
+- 90%+ coverage maintained (currently 90%)
+- All Phase 1-2L pilot SVGs regenerated and captured in `docs/screenshots/`
 
 ### Known Limitations / Future Work
 
