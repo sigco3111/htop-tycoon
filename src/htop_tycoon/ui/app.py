@@ -134,15 +134,26 @@ class HtopTycoonApp(App[None]):
         self._restart_tick_timer()
 
     def _tick_one_day(self) -> None:
-        """Advance the simulation by one game-day (spec §5.2)."""
+        """Advance the simulation by one game-day (spec §5.2).
+
+        Widget updates are guarded: when a ModalScreen (StrategyPickerScreen,
+        GameStarterScreen, AwardScreen, EndingScreen, etc.) is on top of
+        the main screen, ``query_one(HtopHeader)`` / ``MetricBar`` raise
+        ``NoMatches`` because those widgets belong to the main screen,
+        not the modal. The simulation still advances; only the UI push
+        is skipped for that tick (the modal re-reads the latest state
+        on dismiss).
+        """
         from htop_tycoon.engine.rng import GameRNG
         from htop_tycoon.engine.tick import run_day
         rng = GameRNG(self._state.rng_seed + self._state.day)  # deterministic per day
         self._state, _events = run_day(self._state, rng, strategy=None)
-        # Push the new state into the reactive widgets
-        self.query_one(HtopHeader).state = self._state
         active = next((p for p in self._state.projects if not p.is_complete), None)
-        self.query_one(MetricBar).project = active
+        try:
+            self.query_one(HtopHeader).state = self._state
+            self.query_one(MetricBar).project = active
+        except Exception:  # noqa: BLE001
+            pass
 
     def _restart_tick_timer(self) -> None:
         """Stop any existing per-day timer and start a fresh one at the

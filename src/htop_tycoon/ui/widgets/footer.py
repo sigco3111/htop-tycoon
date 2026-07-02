@@ -24,8 +24,6 @@ class HtopFooter(Widget):
     """
 
     def render(self) -> str:
-        fkeys = [b for b in BINDINGS if b.key.startswith("F") and b.description]
-        f_legend = " ".join(f"[{b.key}] {b.description}" for b in fkeys[:10])
         from htop_tycoon.ui.app import _BINDING_KEY_PREFIXES
 
         action_keys = [
@@ -37,10 +35,12 @@ class HtopFooter(Widget):
             and b.key in _BINDING_KEY_PREFIXES
         ]
         a_legend = " ".join(f"[{b.key}] {b.description}" for b in action_keys)
+        fkeys = [b for b in BINDINGS if b.key.startswith("F") and b.description]
+        f_legend = " ".join(f"[{b.key}] {b.description}" for b in fkeys[:10])
         speed = "Speed: [0]정지 [1]1x [2]2x [3]3x [4]4x(QA)"
         auto_on = getattr(self.app, "auto_mode", False)
         auto = f"[Auto: {'ON' if auto_on else 'OFF'}]"
-        return f"{f_legend}  {a_legend}  {speed}  {auto}"
+        return f"{a_legend}  {speed}  {auto}\n{f_legend}"
 
 
 __all__ = ["HtopFooter"]
