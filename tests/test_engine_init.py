@@ -48,8 +48,8 @@ def test_reexports_are_callable() -> None:
 def test_no_internals_leaked() -> None:
     """Internal helpers must NOT be re-exported."""
     with pytest.raises(ImportError):
-        from htop_tycoon.engine import (
-            _drift_satisfaction_for_all,  # type: ignore[attr-defined]  # noqa: F401
+        from htop_tycoon.engine import (  # type: ignore[attr-defined]  # noqa: F401
+            _drift_satisfaction_for_all,
         )
 
 
