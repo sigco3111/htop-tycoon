@@ -237,17 +237,18 @@ class HtopTycoonApp(App[int]):
         self.push_screen(modal, callback=_on_dismiss)
 
     def _close_modal(self) -> None:
-        """Pop the top modal screen and clear its _pending alias synchronously.
+        """Close the top modal screen and clear its _pending alias.
 
-        Workaround for Textual's pop_screen callback being scheduled via
-        call_next (asynchronous) and not executing before pilot.pause().
-        Without this synchronous cleanup, _pending_*_screen stays set to
-        the modal instance after dismiss — _is_modal_open() stays True
-        and tick pause remains in effect.
+        Uses App.pop_screen for the standard dismiss lifecycle (cleanup
+        callback fires) plus synchronous _pending cleanup so the modal
+        disappears from screen_stack immediately and _is_modal_open()
+        returns False by the time pilot.pause() resumes.
+
+        Without synchronous cleanup, Textual's dismiss callback is
+        scheduled via call_next (asynchronous) and _pending stays set
+        after the modal is gone — _is_modal_open() stays True.
         """
-        if len(self.screen_stack) > 1:
-            self.screen_stack.pop()
-        for attr in (
+        _pending_attrs = (
             "_pending_strategy_picker",
             "_pending_hire_screen",
             "_pending_fire_screen",
@@ -258,8 +259,16 @@ class HtopTycoonApp(App[int]):
             "_pending_help_screen",
             "_pending_new_project_screen",
             "_pending_ending_screen",
-        ):
-            setattr(self, attr, None)
+        )
+        if len(self.screen_stack) > 1:
+            modal = self.screen_stack[-1]
+            for attr in _pending_attrs:
+                if getattr(self, attr) is modal:
+                    setattr(self, attr, None)
+            self.pop_screen()
+        for attr in _pending_attrs:
+            if getattr(self, attr) is not None:
+                setattr(self, attr, None)
 
     def action_digit(self, key: str) -> None:
         """Forward a digit key from a ModalScreen to the router."""
