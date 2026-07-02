@@ -136,10 +136,11 @@ class HtopTycoonApp(App[int]):
         yield HtopFooter(state=self._state)
 
     def _refresh_header(self) -> None:
-        old = self.query(HtopHeader)
-        for h in list(old):
+        main_screen = self.screen_stack[0]
+        old = list(main_screen.query(HtopHeader))
+        for h in old:
             h.remove()
-        self.mount(HtopHeader(state=self._state), before=0)
+        main_screen.mount(HtopHeader(state=self._state), before=0)
 
     def _refresh_legacy(self) -> None:
         legacy = self.query("Static")[-1]  # last Static in body
