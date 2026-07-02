@@ -4,6 +4,13 @@ Phase 2B module. No UI imports, no module-level random access — all
 randomness flows through GameRng passed in by callers.
 """
 
+from htop_tycoon.engine.auto import (
+    AUTO_CONSOLE_BUY_MIN_CASH_CENTS,
+    AUTO_HIRE_MIN_HEADCOUNT,
+    AUTO_VOLUNTARY_SALE_MIN_CENTS,
+    AutoAction,
+    auto_execute,
+)
 from htop_tycoon.engine.console_market import (
     CONSOLE_PRICES,
     available_consoles,
@@ -61,13 +68,6 @@ from htop_tycoon.engine.sales import (
     PLATFORM_PRICE_CENTS,
     QUALITY_MAX_SUM,
     compute_sales_revenue,
-)
-from htop_tycoon.engine.auto import (
-    AUTO_CONSOLE_BUY_MIN_CASH_CENTS,
-    AUTO_HIRE_MIN_HEADCOUNT,
-    AUTO_VOLUNTARY_SALE_MIN_CENTS,
-    AutoAction,
-    auto_execute,
 )
 from htop_tycoon.engine.strategy import (
     STRATEGY_REGISTRY,
@@ -148,4 +148,10 @@ __all__ = [
     "available_consoles",
     "release_project",
     "releaseable_projects",
+    "AUTO_CONSOLE_BUY_MIN_CASH_CENTS",
+    "AUTO_HIRE_MIN_HEADCOUNT",
+    "AUTO_VOLUNTARY_SALE_MIN_CENTS",
+    "AutoAction",
+    "auto_execute",
+    "pick_strategy",
 ]

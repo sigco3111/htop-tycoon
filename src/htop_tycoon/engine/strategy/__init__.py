@@ -264,3 +264,20 @@ def current_strategy(state: CompanyState) -> Strategy:
     if cls is GenreFocusStrategy:
         return cls(state.focus_genre)
     return cls()
+
+
+__all__ = [
+    "CASH_DEAD_CENTS",
+    "CASH_LOW_CENTS",
+    "CASH_RICH_CENTS",
+    "HEADCOUNT_AGGRESSIVE_TARGET",
+    "HEADCOUNT_GENRE_FOCUS_BONUS",
+    "STRATEGY_REGISTRY",
+    "AggressiveStrategy",
+    "BalancedStrategy",
+    "ConservativeStrategy",
+    "GenreFocusStrategy",
+    "Strategy",
+    "current_strategy",
+    "pick_strategy",
+]
