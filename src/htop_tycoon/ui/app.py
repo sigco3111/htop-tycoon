@@ -461,6 +461,40 @@ class HtopTycoonApp(App[int]):
         self._refresh_widgets()
         self._close_modal()
 
+    def action_select_promote_target(self, idx_str: str) -> None:
+        if self._pending_promote_screen is None:
+            return
+        target_id = self._pending_promote_screen.select(int(idx_str))
+        if target_id is None:
+            self.notify("잘못된 선택")
+            return
+        emp = self._state.employees.get(target_id)
+        if emp is None:
+            self.notify("직원을 찾을 수 없습니다")
+            self._pending_promote_screen = None
+            self._close_modal()
+            return
+        from htop_tycoon.ui.screens.promote import PromoteScreen
+        if (
+            emp.job.value != "LEAD"
+            or emp.satisfaction < PromoteScreen.PROMOTION_SAT_THRESHOLD
+            or emp.level >= PromoteScreen.MAX_LEVEL
+        ):
+            self.notify(f"{emp.name}은 승진할 수 없습니다")
+            self._pending_promote_screen = None
+            self._close_modal()
+            return
+        new_emp = emp.promote()
+        new_employees = dict(self._state.employees)
+        new_employees[target_id] = new_emp
+        import dataclasses
+        self._state = dataclasses.replace(self._state, employees=new_employees)
+        self.notify(f"승진: {emp.name} L{emp.level} → L{new_emp.level}")
+        self._pending_promote_screen = None
+        self._refresh_header()
+        self._refresh_widgets()
+        self._close_modal()
+
     def action_route_digit(self, key: str) -> None:
         if self._pending_strategy_picker is not None:
             mapping = {
@@ -483,6 +517,9 @@ class HtopTycoonApp(App[int]):
             return
         if self._pending_console_screen is not None:
             self.action_buy_console(key)
+            return
+        if self._pending_promote_screen is not None:
+            self.action_select_promote_target(key)
             return
         if key in {"1", "2", "3", "4"}:
             self.action_set_speed(int(key))
