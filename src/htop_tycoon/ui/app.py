@@ -247,11 +247,17 @@ class HtopTycoonApp(App[int]):
         self.notify("로드됨")
 
     def action_request_sell(self) -> None:
+        if self._state.auto_on:
+            self.notify("자동 모드 — AI가 매각을 처리합니다")
+            return
         self._state = self._state.set_voluntary_sale_pending(True)
         self.notify("매각 요청 대기열 추가 — 다음 tick에 현금 ≥ $200,000이면 발동")
         self._refresh_widgets()
 
     def action_open_strategy_picker(self) -> None:
+        if self._state.auto_on:
+            self.notify("자동 모드 — AI가 전략을 선택합니다")
+            return
         modal = StrategyPicker(self._state.strategy)
         self._open_pending("_pending_strategy_picker", modal)
         self.notify(
@@ -268,6 +274,9 @@ class HtopTycoonApp(App[int]):
         self._close_modal()
 
     def action_open_hire_screen(self) -> None:
+        if self._state.auto_on:
+            self.notify("자동 모드 — AI가 채용을 처리합니다")
+            return
         used = {e.name for e in self._state.employees.values()}
         modal = HireScreen(
             generate_candidates(self._rng, count=5, used_names=used)
@@ -290,6 +299,9 @@ class HtopTycoonApp(App[int]):
         self._close_modal()
 
     def action_open_fire_screen(self) -> None:
+        if self._state.auto_on:
+            self.notify("자동 모드 — AI가 해고를 처리합니다")
+            return
         if not self._state.employees:
             self.notify("해고할 직원이 없습니다")
             return
@@ -313,6 +325,9 @@ class HtopTycoonApp(App[int]):
         self._close_modal()
 
     def action_open_release_screen(self) -> None:
+        if self._state.auto_on:
+            self.notify("자동 모드 — AI가 출시를 처리합니다")
+            return
         modal = ReleaseScreen(self._state)
         if not modal.projects:
             self.notify("출시 가능한 프로젝트가 없습니다")
@@ -349,6 +364,9 @@ class HtopTycoonApp(App[int]):
         self._close_modal()
 
     def action_open_console_market(self) -> None:
+        if self._state.auto_on:
+            self.notify("자동 모드 — AI가 콘솔 구매를 처리합니다")
+            return
         modal = ConsoleMarketScreen(self._state)
         self._open_pending("_pending_console_screen", modal)
 
@@ -434,6 +452,9 @@ class HtopTycoonApp(App[int]):
         self.notify("승진 대상 선택 (LEAD, 만족도 70%+ 만 가능)")
 
     def action_new_project(self) -> None:
+        if self._state.auto_on:
+            self.notify("자동 모드 — AI가 새 프로젝트를 처리합니다")
+            return
         from htop_tycoon.domain import (
             GameProject,
             GameTitle,
