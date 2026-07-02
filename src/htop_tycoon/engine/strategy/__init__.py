@@ -1,4 +1,4 @@
-"""Strategy ABC + 4 concrete strategies + dispatch registry."""
+"""Strategy ABC + 4 concrete strategies + dispatch registry + meta-strategy."""
 
 from __future__ import annotations
 
@@ -6,6 +6,14 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from htop_tycoon.domain.enums import Genre
+from htop_tycoon.engine.strategy.meta_strategy import (
+    CASH_DEAD_CENTS,
+    CASH_LOW_CENTS,
+    CASH_RICH_CENTS,
+    HEADCOUNT_AGGRESSIVE_TARGET,
+    HEADCOUNT_GENRE_FOCUS_BONUS,
+    pick_strategy,
+)
 from htop_tycoon.engine.strategy.types import StrategyDecision
 
 if TYPE_CHECKING:
