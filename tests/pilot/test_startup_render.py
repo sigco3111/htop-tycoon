@@ -95,3 +95,20 @@ async def test_startup_render_uses_default_theme() -> None:
         # The HTOPTYCOON_THEME object must be importable
         from htop_tycoon.ui import HTOPTYCOON_THEME
         assert HTOPTYCOON_THEME.name == "htoptycoon"
+
+
+def test_theme_uses_terminal_green_not_sky_blue() -> None:
+    """Regression guard: theme must stay terminal green, not revert to sky blue.
+
+    The negative assertions against ``#5fafff`` exist because a previous
+    version of the theme used that color (read too dark on dark backgrounds);
+    a future drive-by change should not silently bring it back.
+    """
+    from htop_tycoon.ui import HTOPTYCOON_THEME
+
+    assert HTOPTYCOON_THEME.secondary == "#39ff14"
+    assert HTOPTYCOON_THEME.accent == "#39ff14"
+    assert HTOPTYCOON_THEME.secondary != "#5fafff"
+    assert HTOPTYCOON_THEME.accent != "#5fafff"
+    assert HTOPTYCOON_THEME.primary == "#00ffaf"
+    assert HTOPTYCOON_THEME.dark is True
