@@ -167,3 +167,61 @@ EVENT_KIND_KO: dict[str, str] = {
     "release": "출시",
     "strategy_changed": "전략 변경",
 }
+
+
+# Korean 2-set (초성) consonant → English letter (used when Korean IME is on).
+# Korean keyboard layout maps 2-set Hangul to QWERTY Latin letters.
+# Below maps the Latin letters we use as game shortcuts to their 2-set
+# Hangul equivalents so a Korean-IME-active key press still hits the binding.
+KO_KEY_MAP: dict[str, str] = {
+    "h": "ㅗ",
+    "n": "ㅜ",
+    "s": "ㄴ",
+    "d": "ㅇ",
+    "c": "ㅊ",
+    "x": "ㅌ",
+    "p": "ㅍ",
+    "q": "ㅂ",
+    "a": "ㅁ",
+    "e": "ㄷ",
+    "r": "ㄱ",
+    "t": "ㅅ",
+    "f": "ㄹ",
+    "g": "ㅎ",
+    "j": "ㅓ",
+    "k": "ㅏ",
+    "l": "ㅣ",
+    "m": "ㅡ",
+    "u": "ㅕ",
+    "w": "ㅈ",
+    "y": "ㅛ",
+    "b": "ㅠ",
+    "z": "ㅋ",
+}
+
+
+def ko_key_for(en_key: str) -> str | None:
+    """Return the Korean 2-set (초성) character for an English letter key.
+
+    Returns None for keys without a 2-set equivalent (digits, F-keys,
+    'escape', 'space', multi-char keys like 'f1').
+    """
+    if not en_key or len(en_key) != 1 or not en_key.isalpha():
+        return None
+    return KO_KEY_MAP.get(en_key.lower())
+
+
+def bind_en_ko(key: str, action: str, name: str, show: bool = True) -> list:
+    """Return 1-2 Textual Binding entries for the given English key.
+
+    Single-char letter keys also get a second hidden binding for the
+    Korean 2-set equivalent, so a Korean-IME-mode key press hits the same
+    action. Non-letter keys return a single binding unchanged.
+    """
+    from textual.binding import Binding
+
+    out: list = [Binding(key, action, name, show=show)]
+    ko = ko_key_for(key)
+    if ko is not None and ko != key:
+        out.append(Binding(ko, action, name, show=False))
+    return out

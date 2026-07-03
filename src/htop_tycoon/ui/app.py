@@ -35,6 +35,7 @@ from htop_tycoon.engine import (
     tick,
 )
 from htop_tycoon.persistence import SAVE_PATH, load_state, save_state
+from htop_tycoon.ui.i18n import bind_en_ko
 from htop_tycoon.ui.mock_state import mock_state
 from htop_tycoon.ui.screens.console import ConsoleMarketScreen
 from htop_tycoon.ui.screens.ending import EndingScreen, LegacyPanel
@@ -73,28 +74,28 @@ class HtopTycoonApp(App[int]):
     SUB_TITLE: str = "Kairosoft Game Dev Story — htop edition"
 
     BINDINGS = [
-        Binding("0", "route_digit('0')", "정지", show=True),
-        Binding("1", "route_digit('1')", "1x", show=True),
-        Binding("2", "route_digit('2')", "2x", show=True),
-        Binding("3", "route_digit('3')", "3x", show=True),
-        Binding("4", "route_digit('4')", "4x", show=True),
-        Binding("p", "toggle_pause", "일시정지", show=True),
-        Binding("f1", "show_help", "도움말", show=True),
-        Binding("f2", "save_game", "저장", show=True),
-        Binding("f3", "search_employee", "검색", show=True),
-        Binding("f5", "toggle_tree", "트리", show=True),
-        Binding("f7", "promote_employee", "승진", show=True),
-        Binding("f8", "load_game", "로드", show=True),
-        Binding("f9", "open_fire_screen", "해고", show=True),
-        Binding("f10", "request_sell", "매각", show=True),
-        Binding("s", "open_strategy_picker", "전략", show=True),
-        Binding("h", "open_hire_screen", "고용", show=True),
-        Binding("x", "open_fire_screen", "해고", show=True),
-        Binding("c", "open_console_market", "콘솔", show=True),
-        Binding("n", "new_project", "새게임", show=True),
-        Binding("d", "toggle_auto", "자동", show=True),
-        Binding("space", "tag_employee", "태그", show=True),
-        Binding("q", "quit", "종료", show=True),
+        *bind_en_ko("0", "route_digit('0')", "정지", show=True),
+        *bind_en_ko("1", "route_digit('1')", "1x", show=True),
+        *bind_en_ko("2", "route_digit('2')", "2x", show=True),
+        *bind_en_ko("3", "route_digit('3')", "3x", show=True),
+        *bind_en_ko("4", "route_digit('4')", "4x", show=True),
+        *bind_en_ko("p", "toggle_pause", "일시정지", show=True),
+        *bind_en_ko("f1", "show_help", "도움말", show=True),
+        *bind_en_ko("f2", "save_game", "저장", show=True),
+        *bind_en_ko("f3", "search_employee", "검색", show=True),
+        *bind_en_ko("f5", "toggle_tree", "트리", show=True),
+        *bind_en_ko("f7", "promote_employee", "승진", show=True),
+        *bind_en_ko("f8", "load_game", "로드", show=True),
+        *bind_en_ko("f9", "open_fire_screen", "해고", show=True),
+        *bind_en_ko("f10", "request_sell", "매각", show=True),
+        *bind_en_ko("s", "open_strategy_picker", "전략", show=True),
+        *bind_en_ko("h", "open_hire_screen", "고용", show=True),
+        *bind_en_ko("x", "open_fire_screen", "해고", show=True),
+        *bind_en_ko("c", "open_console_market", "콘솔", show=True),
+        *bind_en_ko("n", "new_project", "새게임", show=True),
+        *bind_en_ko("d", "toggle_auto", "자동", show=True),
+        *bind_en_ko("space", "tag_employee", "태그", show=True),
+        *bind_en_ko("q", "quit", "종료", show=True),
     ]
 
     def __init__(

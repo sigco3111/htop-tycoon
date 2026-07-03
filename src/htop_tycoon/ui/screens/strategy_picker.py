@@ -9,6 +9,7 @@ from textual.widgets import Static
 
 from htop_tycoon.domain.enums import StrategyKind
 from htop_tycoon.ui.i18n import STRATEGY_KO
+from htop_tycoon.ui.i18n import bind_en_ko
 
 STRATEGY_DESCRIPTIONS: dict[StrategyKind, str] = {
     StrategyKind.AGGRESSIVE: "공격적 고용, 큰 프로젝트, 위험 감수",
@@ -38,12 +39,12 @@ class StrategyPicker(ModalScreen[None]):
     """전략 선택 모달. Esc로 닫기."""
 
     BINDINGS = [
-        Binding("escape", "app.close_top_modal", "닫기"),
-        Binding("0", "app.digit('0')", "정지"),
-        Binding("1", "app.digit('1')", "1x"),
-        Binding("2", "app.digit('2')", "2x"),
-        Binding("3", "app.digit('3')", "3x"),
-        Binding("4", "app.digit('4')", "4x"),
+        *bind_en_ko("escape", "app.close_top_modal", "닫기", show=True),
+        *bind_en_ko("0", "app.digit('0')", "정지", show=True),
+        *bind_en_ko("1", "app.digit('1')", "1x", show=True),
+        *bind_en_ko("2", "app.digit('2')", "2x", show=True),
+        *bind_en_ko("3", "app.digit('3')", "3x", show=True),
+        *bind_en_ko("4", "app.digit('4')", "4x", show=True),
     ]
 
     DEFAULT_CSS = """

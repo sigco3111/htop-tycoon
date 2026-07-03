@@ -9,6 +9,7 @@ from textual.widgets import Static
 
 from htop_tycoon.engine.hr import HireCandidate
 from htop_tycoon.ui.i18n import DEPT_KO, JOB_KO
+from htop_tycoon.ui.i18n import bind_en_ko
 
 
 def render_hire_text(candidates: list[HireCandidate]) -> str:
@@ -30,17 +31,17 @@ class HireScreen(ModalScreen[None]):
     """고용 모달. Esc로 닫기."""
 
     BINDINGS = [
-        Binding("escape", "app.close_top_modal", "닫기"),
-        Binding("0", "app.digit('0')", "정지"),
-        Binding("1", "app.digit('1')", "1"),
-        Binding("2", "app.digit('2')", "2"),
-        Binding("3", "app.digit('3')", "3"),
-        Binding("4", "app.digit('4')", "4"),
-        Binding("5", "app.digit('5')", "5"),
-        Binding("6", "app.digit('6')", "6"),
-        Binding("7", "app.digit('7')", "7"),
-        Binding("8", "app.digit('8')", "8"),
-        Binding("9", "app.digit('9')", "9"),
+        *bind_en_ko("escape", "app.close_top_modal", "닫기", show=True),
+        *bind_en_ko("0", "app.digit('0')", "정지", show=True),
+        *bind_en_ko("1", "app.digit('1')", "1", show=True),
+        *bind_en_ko("2", "app.digit('2')", "2", show=True),
+        *bind_en_ko("3", "app.digit('3')", "3", show=True),
+        *bind_en_ko("4", "app.digit('4')", "4", show=True),
+        *bind_en_ko("5", "app.digit('5')", "5", show=True),
+        *bind_en_ko("6", "app.digit('6')", "6", show=True),
+        *bind_en_ko("7", "app.digit('7')", "7", show=True),
+        *bind_en_ko("8", "app.digit('8')", "8", show=True),
+        *bind_en_ko("9", "app.digit('9')", "9", show=True),
     ]
 
     DEFAULT_CSS = """

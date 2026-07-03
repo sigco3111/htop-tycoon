@@ -9,6 +9,7 @@ from textual.widgets import Static
 
 from htop_tycoon.domain.enums import Genre
 from htop_tycoon.ui.i18n import GENRE_KO
+from htop_tycoon.ui.i18n import bind_en_ko
 
 
 def render_new_project_text(genres: list[Genre] | None = None) -> str:
@@ -33,12 +34,12 @@ class NewProjectScreen(ModalScreen[None]):
     """새 프로젝트 모달. Esc로 닫기."""
 
     BINDINGS = [
-        Binding("escape", "app.close_top_modal", "닫기"),
-        Binding("0", "app.digit('0')", "정지"),
-        Binding("1", "app.digit('1')", "1x"),
-        Binding("2", "app.digit('2')", "2x"),
-        Binding("3", "app.digit('3')", "3x"),
-        Binding("4", "app.digit('4')", "4x"),
+        *bind_en_ko("escape", "app.close_top_modal", "닫기", show=True),
+        *bind_en_ko("0", "app.digit('0')", "정지", show=True),
+        *bind_en_ko("1", "app.digit('1')", "1x", show=True),
+        *bind_en_ko("2", "app.digit('2')", "2x", show=True),
+        *bind_en_ko("3", "app.digit('3')", "3x", show=True),
+        *bind_en_ko("4", "app.digit('4')", "4x", show=True),
     ]
 
     DEFAULT_CSS = """
