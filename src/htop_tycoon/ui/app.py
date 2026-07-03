@@ -617,5 +617,24 @@ class HtopTycoonApp(App[int]):
         self.notify(f"자동: {'ON' if self._state.auto_on else 'OFF'}")
         self._refresh_footer()
 
+    def action_quit(self) -> None:
+        """q 키: 현재 state를 save_path에 저장 후 종료."""
+        self._auto_save()
+        self.exit()
+
+    def quit(self) -> None:
+        """모든 종료 path에서 자동 저장."""
+        self._auto_save()
+        self._exit = True
+        self._close_messages_no_wait()
+
+    def _auto_save(self) -> None:
+        try:
+            save_state(self._state, self._save_path)
+        except OSError as exc:
+            self.notify(f"자동 저장 실패: {exc}")
+            return
+        self.notify(f"자동 저장됨: {self._save_path}")
+
     def action_tag_employee(self) -> None:
         self.notify("태그 기능 곧 출시")
