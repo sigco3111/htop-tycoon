@@ -166,6 +166,7 @@ EVENT_KIND_KO: dict[str, str] = {
     "purchase_console": "콘솔 구매",
     "release": "출시",
     "strategy_changed": "전략 변경",
+    "promote": "승진",
 }
 
 

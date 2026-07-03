@@ -24,6 +24,7 @@ class EventKind(StrEnum):
     PURCHASE_CONSOLE = "purchase_console"
     RELEASE = "release"
     STRATEGY_CHANGED = "strategy_changed"
+    PROMOTE = "promote"
 
 
 @dataclass(frozen=True, slots=True)

@@ -6,18 +6,20 @@ when state.auto_on is True; replaces _apply_strategy_decisions in that path.
 Steps (in order):
 1. Re-pick strategy via pick_strategy
 2. Auto-hire best candidate if strategy says hire and conditions allow
-3. Auto-fire lowest-stat employee if cash low and zombies exist
-4. Auto-release shipped project on cheapest non-owned console
-5. Auto-buy cheapest affordable console if no own console and cash ≥ $80k
-6. Auto-request voluntary sale if mega_hit or hall_of_fame and cash ≥ $200k
+3. Auto-fire zombies (HR cleanup — user reported zombies left unattended)
+4. Auto-promote satisfied LEADs (HR growth — user reported no promotion)
+5. Auto-release shipped project on cheapest non-owned console
+6. Auto-buy cheapest affordable console if no own console and cash ≥ $80k
+7. Auto-request voluntary sale if mega_hit or hall_of_fame and cash ≥ $200k
 """
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from htop_tycoon.domain.enums import StrategyKind
+from htop_tycoon.domain.enums import Job, StrategyKind
 from htop_tycoon.engine.console_market import (
     CONSOLE_PRICES,
     available_consoles,
@@ -44,6 +46,8 @@ if TYPE_CHECKING:
 AUTO_CONSOLE_BUY_MIN_CASH_CENTS: int = 80_000_00
 AUTO_VOLUNTARY_SALE_MIN_CENTS: int = 200_000_00
 AUTO_HIRE_MIN_HEADCOUNT: int = 10
+AUTO_PROMOTE_MIN_SATISFACTION: int = 80
+AUTO_PROMOTE_MAX_LEVEL: int = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +66,55 @@ def _append(state: CompanyState, kind: EventKind, description: str) -> CompanySt
             kind=kind,
             description=description,
         )
+    )
+
+
+def _auto_fire_zombies(state: CompanyState) -> CompanyState:
+    """Fire lowest-satisfaction zombie regardless of cash state.
+
+    Conservative strategy fires only when cash < CASH_LOW_CENTS. With auto
+    on, the user expects HR to not let zombies linger even when cash is
+    healthy. Limit to one fire per tick to avoid mass layoffs.
+    """
+    zombies = [e for e in state.employees.values() if e.is_zombie]
+    if not zombies:
+        return state
+    worst = min(zombies, key=lambda e: e.satisfaction)
+    new_state = fire_employee(state, worst.id)
+    return _append(
+        new_state,
+        EventKind.FIRE,
+        f"자동 해고: {worst.name} (좀비, 만족도 {worst.satisfaction}%)",
+    )
+
+
+def _auto_promote(state: CompanyState) -> CompanyState:
+    """Promote a satisfied LEAD (>= 80% satisfaction, < MAX_LEVEL).
+
+    Promotes at most one LEAD per tick (oldest first, by id) to keep the
+    monthly salary cost manageable.
+    """
+    candidates = sorted(
+        (
+            (eid, emp)
+            for eid, emp in state.employees.items()
+            if emp.job == Job.LEAD
+            and emp.satisfaction >= AUTO_PROMOTE_MIN_SATISFACTION
+            and emp.level < AUTO_PROMOTE_MAX_LEVEL
+        ),
+        key=lambda kv: int(kv[0]),
+    )
+    if not candidates:
+        return state
+    eid, emp = candidates[0]
+    new_emp = emp.promote()
+    new_employees = dict(state.employees)
+    new_employees[eid] = new_emp
+    new_state = dataclasses.replace(state, employees=new_employees)
+    return _append(
+        new_state,
+        EventKind.PROMOTE,
+        f"자동 승진: {emp.name} L{emp.level} → L{new_emp.level}",
     )
 
 
@@ -110,6 +163,10 @@ def auto_execute(
             new_state = _append(
                 new_state, EventKind.FIRE, f"해고: {worst.name} (좀비)"
             )
+
+    new_state = _auto_promote(new_state)
+
+    new_state = _auto_fire_zombies(new_state)
 
     releasable = releaseable_projects(new_state)
     if releasable:
