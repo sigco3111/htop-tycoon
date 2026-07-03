@@ -10,6 +10,7 @@ from textual.widgets import Static
 from htop_tycoon.domain import CompanyState, Employee, EmployeeId
 from htop_tycoon.ui.i18n import JOB_KO
 from htop_tycoon.ui.i18n import bind_en_ko
+from htop_tycoon.ui.ime import KoreanIMEMixin
 
 
 def render_fire_text(ordered: list[Employee], max_visible: int = 9) -> str:
@@ -27,8 +28,7 @@ def render_fire_text(ordered: list[Employee], max_visible: int = 9) -> str:
     lines.append(f"1-{len(visible)} 키로 해고, 'x' 또는 F9로 닫기.")
     return "\n".join(lines)
 
-
-class FireScreen(ModalScreen[None]):
+class FireScreen(KoreanIMEMixin, ModalScreen[None]):
     """해고 모달. Esc로 닫기."""
 
     BINDINGS = [

@@ -13,6 +13,7 @@ from htop_tycoon.engine.console_market import (
     console_price,
 )
 from htop_tycoon.ui.i18n import bind_en_ko
+from htop_tycoon.ui.ime import KoreanIMEMixin
 
 
 def render_console_market_text(state: CompanyState, listings: list[Console]) -> str:
@@ -35,8 +36,7 @@ def render_console_market_text(state: CompanyState, listings: list[Console]) -> 
     lines.append(f"1-{len(listings)} 키로 구매, 'c'로 닫기.")
     return "\n".join(lines)
 
-
-class ConsoleMarketScreen(ModalScreen[None]):
+class ConsoleMarketScreen(KoreanIMEMixin, ModalScreen[None]):
     """콘솔 마켓 모달. Esc로 닫기."""
 
     BINDINGS = [

@@ -10,6 +10,7 @@ from textual.widgets import Static
 from htop_tycoon.engine.hr import HireCandidate
 from htop_tycoon.ui.i18n import DEPT_KO, JOB_KO
 from htop_tycoon.ui.i18n import bind_en_ko
+from htop_tycoon.ui.ime import KoreanIMEMixin
 
 
 def render_hire_text(candidates: list[HireCandidate]) -> str:
@@ -26,8 +27,7 @@ def render_hire_text(candidates: list[HireCandidate]) -> str:
     lines.append(f"1-{len(candidates)} 키로 고용, 'h'로 닫기.")
     return "\n".join(lines)
 
-
-class HireScreen(ModalScreen[None]):
+class HireScreen(KoreanIMEMixin, ModalScreen[None]):
     """고용 모달. Esc로 닫기."""
 
     BINDINGS = [

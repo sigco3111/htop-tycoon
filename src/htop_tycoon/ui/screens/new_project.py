@@ -10,6 +10,7 @@ from textual.widgets import Static
 from htop_tycoon.domain.enums import Genre
 from htop_tycoon.ui.i18n import GENRE_KO
 from htop_tycoon.ui.i18n import bind_en_ko
+from htop_tycoon.ui.ime import KoreanIMEMixin
 
 
 def render_new_project_text(genres: list[Genre] | None = None) -> str:
@@ -29,8 +30,7 @@ def render_new_project_text(genres: list[Genre] | None = None) -> str:
     lines.append("[닫기: Esc]")
     return "\n".join(lines)
 
-
-class NewProjectScreen(ModalScreen[None]):
+class NewProjectScreen(KoreanIMEMixin, ModalScreen[None]):
     """새 프로젝트 모달. Esc로 닫기."""
 
     BINDINGS = [

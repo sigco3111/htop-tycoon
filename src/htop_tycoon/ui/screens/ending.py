@@ -16,6 +16,7 @@ from htop_tycoon.engine.endings import (
     LegacyScore,
 )
 from htop_tycoon.ui.i18n import ENDING_KO
+from htop_tycoon.ui.ime import KoreanIMEMixin
 from htop_tycoon.ui.i18n import bind_en_ko
 
 __all__ = [
@@ -72,8 +73,7 @@ def render_ending_text(ending: Ending, legacy: LegacyScore) -> str:
         f"\n[새 게임]    [종료]"
     )
 
-
-class EndingScreen(ModalScreen[None]):
+class EndingScreen(KoreanIMEMixin, ModalScreen[None]):
     """엔딩 모달. Esc로 닫기."""
 
     BINDINGS = [

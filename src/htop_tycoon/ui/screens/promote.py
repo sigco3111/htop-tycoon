@@ -10,6 +10,7 @@ from textual.widgets import Static
 from htop_tycoon.domain import CompanyState, Employee, EmployeeId
 from htop_tycoon.ui.i18n import DEPT_KO, JOB_KO
 from htop_tycoon.ui.i18n import bind_en_ko
+from htop_tycoon.ui.ime import KoreanIMEMixin
 
 
 def render_promote_text(state: CompanyState) -> str:
@@ -41,8 +42,7 @@ def render_promote_text(state: CompanyState) -> str:
     lines.append("[닫기: Esc]")
     return "\n".join(lines)
 
-
-class PromoteScreen(ModalScreen[None]):
+class PromoteScreen(KoreanIMEMixin, ModalScreen[None]):
     """승진 모달. Esc로 닫기."""
 
     BINDINGS = [

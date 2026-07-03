@@ -9,6 +9,7 @@ from textual.widgets import Static
 
 from htop_tycoon.ui.i18n import BINDINGS_KO, ENDING_KO, SET_KO_LABELS
 from htop_tycoon.ui.i18n import bind_en_ko
+from htop_tycoon.ui.ime import KoreanIMEMixin
 
 
 def render_help_text() -> str:
@@ -46,8 +47,7 @@ def render_help_text() -> str:
     ]
     return "\n".join(lines)
 
-
-class HelpScreen(ModalScreen[None]):
+class HelpScreen(KoreanIMEMixin, ModalScreen[None]):
     """도움말 모달. Esc로 닫기."""
 
     BINDINGS = [

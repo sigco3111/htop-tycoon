@@ -7,6 +7,7 @@ from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import Static
 from htop_tycoon.ui.i18n import bind_en_ko
+from htop_tycoon.ui.ime import KoreanIMEMixin
 
 
 def render_search_text(query: str = "", candidates: list[str] | None = None) -> str:
@@ -29,8 +30,7 @@ def render_search_text(query: str = "", candidates: list[str] | None = None) -> 
     lines.append("[닫기: Esc]")
     return "\n".join(lines)
 
-
-class SearchScreen(ModalScreen[None]):
+class SearchScreen(KoreanIMEMixin, ModalScreen[None]):
     """검색 모달. Esc로 닫기."""
 
     BINDINGS = [

@@ -10,6 +10,7 @@ from textual.widgets import Static
 from htop_tycoon.domain import CompanyState, GameProject, ProjectId
 from htop_tycoon.ui.i18n import GENRE_KO
 from htop_tycoon.ui.i18n import bind_en_ko
+from htop_tycoon.ui.ime import KoreanIMEMixin
 
 
 def render_release_text(projects: list[GameProject]) -> str:
@@ -30,8 +31,7 @@ def render_release_text(projects: list[GameProject]) -> str:
     lines.append(f"1-{len(projects)} 키로 출시, 'esc'로 취소.")
     return "\n".join(lines)
 
-
-class ReleaseScreen(ModalScreen[None]):
+class ReleaseScreen(KoreanIMEMixin, ModalScreen[None]):
     """출시 모달. Esc로 닫기."""
 
     BINDINGS = [

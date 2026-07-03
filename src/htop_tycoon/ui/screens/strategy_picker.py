@@ -10,6 +10,7 @@ from textual.widgets import Static
 from htop_tycoon.domain.enums import StrategyKind
 from htop_tycoon.ui.i18n import STRATEGY_KO
 from htop_tycoon.ui.i18n import bind_en_ko
+from htop_tycoon.ui.ime import KoreanIMEMixin
 
 STRATEGY_DESCRIPTIONS: dict[StrategyKind, str] = {
     StrategyKind.AGGRESSIVE: "공격적 고용, 큰 프로젝트, 위험 감수",
@@ -34,8 +35,7 @@ def render_strategy_picker_text(current: StrategyKind) -> str:
     lines.append("1-4 키로 선택, 's'로 닫기, 'esc'로 취소.")
     return "\n".join(lines)
 
-
-class StrategyPicker(ModalScreen[None]):
+class StrategyPicker(KoreanIMEMixin, ModalScreen[None]):
     """전략 선택 모달. Esc로 닫기."""
 
     BINDINGS = [
