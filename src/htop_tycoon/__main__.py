@@ -4,12 +4,16 @@ v3.0: instantiates HtopTycoonApp with parsed args and launches the TUI.
 `--seed` controls the RNG, `--speed` sets the initial tick rate,
 `--headless` runs a short headless smoke test (for CI; exits after
 a few ticks).
+
+v3.1.2: --no-save flag added; on startup, if a save file exists
+it is loaded automatically; otherwise a fresh mock_state is used.
 """
 
 from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
+from pathlib import Path
 
 from htop_tycoon import __version__
 
@@ -42,6 +46,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="run a short headless smoke test (no TUI, exits after 3 ticks)",
     )
     parser.add_argument(
+        "--no-save",
+        action="store_true",
+        help="ignore any existing save file and start a fresh game",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"htop-tycoon {__version__}",
@@ -72,6 +81,28 @@ def _run_headless(seed: int | None, speed: int, max_ticks: int = 3) -> int:
     return 0
 
 
+def _build_initial_state(args, save_path: Path) -> object:
+    """Return the initial CompanyState for the TUI.
+
+    If save_path exists and --no-save is not set, load the saved game.
+    Otherwise start from a fresh mock_state. Always enables auto_on=True
+    (v3.1 watcher mode). On any load error, fall back to mock_state so
+    the user is never stuck without a playable game.
+    """
+    from htop_tycoon.persistence import load_state
+    from htop_tycoon.ui.mock_state import mock_state
+
+    if save_path.exists() and not getattr(args, "no_save", False):
+        try:
+            state = load_state(save_path)
+            print(f"저장된 게임 로드: {save_path}")
+            return state.toggle_auto()
+        except (OSError, ValueError, Exception) as exc:
+            print(f"저장 로드 실패 ({exc!r}), 기본 게임으로 시작합니다")
+
+    return mock_state(speed=args.speed).toggle_auto()
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """CLI entry point. Returns process exit code."""
     parser = _build_parser()
@@ -82,10 +113,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     from htop_tycoon.domain.rng import GameRng
     from htop_tycoon.engine import DEFAULT_MARKET
+    from htop_tycoon.persistence import SAVE_PATH
     from htop_tycoon.ui.app import HtopTycoonApp
-    from htop_tycoon.ui.mock_state import mock_state
 
-    state = mock_state(speed=args.speed).toggle_auto()
+    state = _build_initial_state(args, SAVE_PATH)
     rng = GameRng(args.seed if args.seed is not None else state.rng_seed)
     app = HtopTycoonApp(state=state, rng=rng, market=DEFAULT_MARKET)
     return app.run() or 0
